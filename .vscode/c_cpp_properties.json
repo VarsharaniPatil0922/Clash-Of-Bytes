@@ -1,0 +1,27 @@
+{
+  "configurations": [
+    {
+      "name": "Win32-GCC",
+      "includePath": [
+        "${workspaceFolder}/Clash_Of_Bytes/**",
+        "${workspaceFolder}/Clash_Of_Bytes/1_Computer_Graphics",
+        "${workspaceFolder}/Clash_Of_Bytes/2_Programming_Laboratory_DSA",
+        "${workspaceFolder}/Clash_Of_Bytes/3_Computer_Organization_Architecture",
+        "C:/msys64/ucrt64/include/**",
+        "C:/msys64/ucrt64/include/c++/16.1.0/**",
+        "C:/msys64/ucrt64/include/c++/16.1.0/x86_64-w64-mingw32"
+      ],
+      "defines": [
+        "_DEBUG",
+        "UNICODE",
+        "_UNICODE"
+      ],
+      "compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-gcc-x64",
+      "compileCommands": "${workspaceFolder}/Clash_Of_Bytes/compile_commands.json"
+    }
+  ],
+  "version": 4
+}

@@ -1,0 +1,7 @@
+Name,Health,MaxHealth,BaseAttack,Archetype
+Ironclad Warrior,100.6,115.0,18.0,WarriorFighter
+Blaze Berserker,130.0,130.0,22.0,BerserkerWarrior
+Shadow Ninja,60.5,95.0,16.0,NinjaFighter
+Cyber Brawler,110.0,110.0,19.0,CyberBrawler
+Aura Paladin,120.0,120.0,17.0,PaladinFighter
+Titan Gladiator,140.0,140.0,24.0,HybridGladiator

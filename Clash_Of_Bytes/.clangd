@@ -1,0 +1,23 @@
+CompileFlags:
+  Compiler: C:/msys64/ucrt64/bin/g++.exe
+  Add:
+    - -std=c++17
+    - -target
+    - x86_64-w64-mingw32
+    - --sysroot=C:/msys64/ucrt64
+    - -isystem
+    - C:/msys64/ucrt64/include/c++/16.1.0
+    - -isystem
+    - C:/msys64/ucrt64/include/c++/16.1.0/x86_64-w64-mingw32
+    - -isystem
+    - C:/msys64/ucrt64/include/c++/16.1.0/backward
+    - -isystem
+    - C:/msys64/ucrt64/include
+    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_task3 new/Clash_Of_Bytes/1_Computer_Graphics
+    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_task3 new/Clash_Of_Bytes/2_Programming_Laboratory_DSA
+    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_task3 new/Clash_Of_Bytes/3_Computer_Organization_Architecture
+    - -I1_Computer_Graphics
+    - -I2_Programming_Laboratory_DSA
+    - -I3_Computer_Organization_Architecture
+Diagnostics:
+  UnusedIncludes: None
