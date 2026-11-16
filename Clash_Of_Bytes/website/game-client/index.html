@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clash of Bytes — 2D Fighting Arena Client</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #040711;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    header { margin-bottom: 16px; text-align: center; }
+    h1 {
+      font-size: 2.2rem;
+      letter-spacing: 2px;
+      color: #00e5ff;
+      text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+      text-transform: uppercase;
+    }
+    .subtitle { font-size: 0.95rem; color: #94a3b8; margin-top: 4px; }
+    .canvas-container {
+      border: 2px solid #00e5ff;
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.35);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas { display: block; width: 960px; height: 540px; max-width: 100%; }
+    .controls-guide {
+      margin-top: 18px;
+      display: flex;
+      gap: 30px;
+      background: #0f172a;
+      padding: 16px 24px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      max-width: 960px;
+      width: 100%;
+      justify-content: space-around;
+    }
+    .p1-controls { color: #00e5ff; }
+    .p2-controls { color: #ff2a6d; }
+    .controls-guide h3 { font-size: 1.1rem; margin-bottom: 8px; border-bottom: 1px solid currentColor; padding-bottom: 4px; }
+    .controls-guide p { font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; }
+    .controls-guide span.key {
+      display: inline-block;
+      background: #1e293b;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #475569;
+      font-weight: bold;
+      font-size: 0.8rem;
+    }
+    .action-bar { margin-top: 14px; display: flex; gap: 16px; }
+    button {
+      background: linear-gradient(135deg, #00e5ff, #0077b6);
+      color: #040711;
+      border: none;
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    button:hover { box-shadow: 0 0 15px rgba(0, 229, 255, 0.8); }
+    button.secondary { background: #1e293b; color: #e2e8f0; border: 1px solid #475569; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Clash of Bytes</h1>
+    <div class="subtitle">2D Local Multiplayer Cyber Fighting Game — HTML5 Canvas Engine</div>
+  </header>
+
+  <div class="canvas-container">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+  </div>
+
+  <div class="action-bar">
+    <button id="btnRestart">Restart Match</button>
+    <button id="btnMute" class="secondary">Mute Audio</button>
+  </div>
+
+  <div class="controls-guide">
+    <div class="p1-controls">
+      <h3>Player 1 (Cyber Brawler)</h3>
+      <p>Move: <span class="key">A</span> / <span class="key">D</span> | Jump: <span class="key">W</span> | Block: <span class="key">S</span></p>
+      <p>Light Attack: <span class="key">F</span> | Heavy: <span class="key">G</span> | Special: <span class="key">R</span></p>
+    </div>
+    <div class="p2-controls">
+      <h3>Player 2 (Shadow Ninja)</h3>
+      <p>Move: <span class="key">←</span> / <span class="key">→</span> | Jump: <span class="key">↑</span> | Block: <span class="key">↓</span></p>
+      <p>Light Attack: <span class="key">J</span> | Heavy: <span class="key">K</span> | Special: <span class="key">L</span></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { ClashGameEngine } from './engine.js';
+    import { sounds } from './audio.js';
+
+    const canvas = document.getElementById('gameCanvas');
+    let engine = new ClashGameEngine(
+      canvas,
+      { id: 4, name: 'Cyber Brawler' },
+      { id: 3, name: 'Shadow Ninja' },
+      (result) => {
+        alert(`Match Complete! Winner: Player ${result.winnerPlayerIndex}\nP1 Score: ${result.p1Score} | P2 Score: ${result.p2Score}`);
+      }
+    );
+    engine.start();
+
+    document.getElementById('btnRestart').addEventListener('click', () => {
+      engine.stop();
+      engine = new ClashGameEngine(canvas, { id: 4, name: 'Cyber Brawler' }, { id: 3, name: 'Shadow Ninja' }, (res) => console.log(res));
+      engine.start();
+    });
+
+    document.getElementById('btnMute').addEventListener('click', (e) => {
+      const isMuted = sounds.toggleMute();
+      e.target.innerText = isMuted ? 'Unmute Audio' : 'Mute Audio';
+    });
+  </script>
+</body>
+</html>
