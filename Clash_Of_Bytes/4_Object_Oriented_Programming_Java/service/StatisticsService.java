@@ -29,4 +29,8 @@ public class StatisticsService {
     public List<MatchHistoryRow> getMatchHistoryForUser(int userId) throws SQLException {
         return statisticsDAO.getMatchHistoryForUser(userId);
     }
+
+    public List<StatisticsDAO.LeaderboardRow> getLeaderboard(int limit) throws SQLException {
+        return statisticsDAO.getLeaderboard(limit);
+    }
 }

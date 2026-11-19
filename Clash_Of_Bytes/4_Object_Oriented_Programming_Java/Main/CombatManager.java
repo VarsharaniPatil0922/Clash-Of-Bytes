@@ -291,7 +291,7 @@ public class CombatManager {
             System.out.println("  [5] Run Automated CO4 Practical Test Suite (File Handling & Java Generics)");
             System.out.println("  [6] Export / Save Fighter Roster to File (CO4 File Handling)");
             System.out.println("  [7] View Persistent Match History Logs from File (CO4 File Handling)");
-            System.out.println("  [8] Open Database Two-Player Login & Match History System (Swing / JDBC)");
+            System.out.println("  [8] Open Database Desktop Main Menu & Two-Player Arena Hub (Swing / JDBC)");
             System.out.println("  [9] Exit");
             System.out.println("=======================================================================");
             System.out.print("Enter choice [1-9]: ");
@@ -363,12 +363,12 @@ public class CombatManager {
                 MatchHistoryFileManager logMgr = new MatchHistoryFileManager("match_history.log");
                 logMgr.displayStoredLogs();
             } else if (choice == 8) {
-                System.out.println("\n[*] Launching Database Dual-Player Authentication & Match History System...");
+                System.out.println("\n[*] Launching Database Desktop Main Menu & Two-Player Arena Hub...");
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    ui.TwoPlayerLoginFrame loginFrame = new ui.TwoPlayerLoginFrame();
-                    loginFrame.setVisible(true);
+                    ui.MainMenuFrame mainFrame = new ui.MainMenuFrame();
+                    mainFrame.setVisible(true);
                 });
-                System.out.println("[SUCCESS] Two-Player Database Authentication Window opened on desktop!\n");
+                System.out.println("[SUCCESS] Desktop Main Menu & Arena Hub opened on desktop!\n");
             } else if (choice == 9) {
                 System.out.println("\nSession concluded. Exiting Clash of Bytes.");
                 running = false;

@@ -59,6 +59,16 @@ if %CXX_ERR% EQU 0 (
     exit /b %CXX_ERR%
 )
 
+:: Compile Computer Graphics Practicals Suite (Focus: Spinning Cube & Line Clipping)
+echo.
+echo [*] Compiling Computer Graphics (CG) Practicals 01 to 06 and Task 1-4 Suite...
+g++ -std=c++17 -O2 1_Computer_Graphics/cg_practicals_runner.cpp -I1_Computer_Graphics -o cg_practicals.exe -lopengl32 -lgdi32
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] cg_practicals.exe compiled successfully!
+) else (
+    echo [WARNING] Computer Graphics suite compilation encountered an issue.
+)
+
 :: Compile DSA Practicals Test Suite
 echo.
 echo [*] Compiling Programming Lab (DSA) Practicals 01 to 09 and Task 4 Suite...

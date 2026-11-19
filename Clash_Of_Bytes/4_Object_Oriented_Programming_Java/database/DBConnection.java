@@ -18,7 +18,18 @@ import java.util.Properties;
 public class DBConnection {
 
     private static final String DEFAULT_SQLITE_FILE = "clash_of_bytes.db";
-    private static String dbUrl = "jdbc:sqlite:" + DEFAULT_SQLITE_FILE;
+
+    private static String resolveSqliteFilePath() {
+        File direct = new File("clash_of_bytes.db");
+        if (direct.exists()) return "clash_of_bytes.db";
+        File sub = new File("Clash_Of_Bytes/clash_of_bytes.db");
+        if (sub.exists()) return sub.getPath();
+        File parent = new File("../clash_of_bytes.db");
+        if (parent.exists()) return parent.getPath();
+        return "clash_of_bytes.db";
+    }
+
+    private static String dbUrl = "jdbc:sqlite:" + resolveSqliteFilePath();
     private static String dbUser = "";
     private static String dbPassword = "";
     private static String dbDriver = "org.sqlite.JDBC";

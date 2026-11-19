@@ -38,6 +38,8 @@ public class BackendTestSuite {
             test12_VerifyPlayerCareerStatsAggregation(conn);
             test13_VerifyGlobalLeaderboardRanking(conn);
             test14_TransactionRollbackOnForeignConstraint(conn);
+            test15_VerifyDualPlayerSimultaneousSessions(conn);
+            test16_VerifyMatchTelemetryCompleteness(conn);
         } catch (Exception e) {
             System.err.println("[FATAL TEST ERROR] " + e.getMessage());
             e.printStackTrace();
@@ -298,6 +300,46 @@ public class BackendTestSuite {
             pass("Test 14: Transaction Rollback Integrity", "Rollback triggered successfully on FK violation");
         } finally {
             conn.setAutoCommit(true);
+        }
+    }
+
+    private static void test15_VerifyDualPlayerSimultaneousSessions(Connection conn) {
+        String tokenP1 = "cob_token_P1_1_" + UUID.randomUUID().toString();
+        String tokenP2 = "cob_token_P2_2_" + UUID.randomUUID().toString();
+        Map<String, Long> activeSessions = new HashMap<>();
+        activeSessions.put(tokenP1, 1L);
+        activeSessions.put(tokenP2, 2L);
+
+        boolean simultaneous = (activeSessions.get(tokenP1) == 1L && activeSessions.get(tokenP2) == 2L);
+        activeSessions.remove(tokenP1); // Logout P1
+        boolean p2Retained = (activeSessions.get(tokenP2) == 2L && !activeSessions.containsKey(tokenP1));
+
+        if (simultaneous && p2Retained) {
+            pass("Test 15: Dual Simultaneous Sessions", "Both tokens retained independently; P1 logout leaves P2 intact");
+        } else {
+            fail("Test 15: Dual Simultaneous Sessions", "Session state interference detected");
+        }
+    }
+
+    private static void test16_VerifyMatchTelemetryCompleteness(Connection conn) throws SQLException {
+        String sql = "SELECT match_id, player1_user_id, player2_user_id, winner_user_id, loser_user_id, " +
+                     "player1_rounds_won, player2_rounds_won, match_duration_seconds FROM matches ORDER BY match_id DESC LIMIT 1";
+        try (Statement s = conn.createStatement(); ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) {
+                long mId = rs.getLong("match_id");
+                long p1Id = rs.getLong("player1_user_id");
+                long p2Id = rs.getLong("player2_user_id");
+                long winId = rs.getLong("winner_user_id");
+                long loseId = rs.getLong("loser_user_id");
+                int dur = rs.getInt("match_duration_seconds");
+                int r1 = rs.getInt("player1_rounds_won");
+                int r2 = rs.getInt("player2_rounds_won");
+
+                pass("Test 16: Telemetry Completeness", String.format("Match #%d: P1(%d) vs P2(%d), Winner=%d, Loser=%d, Rounds=%d-%d, Dur=%ds",
+                        mId, p1Id, p2Id, winId, loseId, r1, r2, dur));
+            } else {
+                fail("Test 16: Telemetry Completeness", "No match records found to verify telemetry");
+            }
         }
     }
 

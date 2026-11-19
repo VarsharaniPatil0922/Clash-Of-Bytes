@@ -12,5 +12,6 @@
     "C:/msys64/ucrt64/include/**",
     "C:/msys64/ucrt64/include/c++/16.1.0/**",
     "C:/msys64/ucrt64/include/c++/16.1.0/x86_64-w64-mingw32"
-  ]
+  ],
+  "java.compile.nullAnalysis.mode": "automatic"
 }

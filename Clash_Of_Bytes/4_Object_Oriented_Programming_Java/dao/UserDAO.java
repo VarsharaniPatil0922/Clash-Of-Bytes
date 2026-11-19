@@ -86,6 +86,19 @@ public class UserDAO {
         return getUserByEmail(email) != null;
     }
 
+    public java.util.List<User> getAllUsers() throws SQLException {
+        java.util.List<User> list = new java.util.ArrayList<>();
+        String sql = "SELECT user_id, username, email, password_hash, salt, created_at FROM users ORDER BY username ASC;";
+        Connection conn = DBConnection.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRowToUser(rs));
+            }
+        }
+        return list;
+    }
+
     private User mapRowToUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("user_id"),

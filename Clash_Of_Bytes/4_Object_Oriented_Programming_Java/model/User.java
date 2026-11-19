@@ -7,6 +7,7 @@ import java.sql.Timestamp;
  */
 public class User {
     private int userId;
+    private String uuid;
     private String username;
     private String email;
     private String passwordHash;
@@ -14,6 +15,12 @@ public class User {
     private Timestamp createdAt;
 
     public User() {}
+
+    public User(String uuid, String username, String email) {
+        this.uuid = uuid;
+        this.username = username;
+        this.email = email;
+    }
 
     public User(String username, String email, String passwordHash, String salt) {
         this.username = username;
@@ -24,6 +31,7 @@ public class User {
 
     public User(int userId, String username, String email, String passwordHash, String salt, Timestamp createdAt) {
         this.userId = userId;
+        this.uuid = String.valueOf(userId);
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
@@ -33,6 +41,9 @@ public class User {
 
     public int getUserId() { return userId; }
     public void setUserId(int userId) { this.userId = userId; }
+
+    public String getUuid() { return uuid != null ? uuid : String.valueOf(userId); }
+    public void setUuid(String uuid) { this.uuid = uuid; }
 
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }

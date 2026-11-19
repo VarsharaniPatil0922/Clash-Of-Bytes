@@ -33,13 +33,18 @@ CREATE TABLE IF NOT EXISTS matches (
     player1_user_id INTEGER NOT NULL,
     player2_user_id INTEGER NOT NULL,
     winner_user_id INTEGER, -- NULL in case of DRAW
+    loser_user_id INTEGER,  -- NULL in case of DRAW
     total_rounds INTEGER NOT NULL,
+    player1_rounds_won INTEGER NOT NULL DEFAULT 0,
+    player2_rounds_won INTEGER NOT NULL DEFAULT 0,
     match_status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED', -- COMPLETED, ABANDONED
     player1_final_score INTEGER NOT NULL,
     player2_final_score INTEGER NOT NULL,
+    match_duration_seconds INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (player1_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (player2_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (winner_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+    FOREIGN KEY (winner_user_id) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (loser_user_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
 -- 4. MATCH_PLAYERS TABLE
@@ -49,6 +54,7 @@ CREATE TABLE IF NOT EXISTS match_players (
     user_id INTEGER NOT NULL,
     character_id INTEGER NOT NULL,
     final_score INTEGER NOT NULL,
+    rounds_won INTEGER NOT NULL DEFAULT 0,
     result VARCHAR(10) NOT NULL, -- WIN, LOSS, DRAW
     FOREIGN KEY (match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
@@ -62,11 +68,14 @@ CREATE TABLE IF NOT EXISTS match_rounds (
     match_id INTEGER NOT NULL,
     round_number INTEGER NOT NULL,
     winner_user_id INTEGER, -- NULL if round was a draw
+    loser_user_id INTEGER,  -- NULL if round was a draw
     player1_score INTEGER NOT NULL,
     player2_score INTEGER NOT NULL,
     round_status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED',
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
-    FOREIGN KEY (winner_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+    FOREIGN KEY (winner_user_id) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (loser_user_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
 -- INDEXES FOR OPTIMAL QUERY PERFORMANCE
@@ -75,6 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_matches_p1 ON matches(player1_user_id);
 CREATE INDEX IF NOT EXISTS idx_matches_p2 ON matches(player2_user_id);
 CREATE INDEX IF NOT EXISTS idx_matches_winner ON matches(winner_user_id);
+CREATE INDEX IF NOT EXISTS idx_matches_loser ON matches(loser_user_id);
 CREATE INDEX IF NOT EXISTS idx_match_players_match ON match_players(match_id);
 CREATE INDEX IF NOT EXISTS idx_match_players_user ON match_players(user_id);
 CREATE INDEX IF NOT EXISTS idx_match_rounds_match ON match_rounds(match_id);

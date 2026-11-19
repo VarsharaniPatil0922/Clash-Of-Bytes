@@ -47,6 +47,33 @@ public class StatisticsDAO {
     }
 
     /**
+     * DTO for representing a Tournament Leaderboard Row.
+     */
+    public static class LeaderboardRow {
+        public int rank;
+        public int userId;
+        public String username;
+        public int totalMatches;
+        public int wins;
+        public int losses;
+        public int draws;
+        public double winRate;
+        public int careerScore;
+
+        public LeaderboardRow(int rank, int userId, String username, int totalMatches, int wins, int losses, int draws, double winRate, int careerScore) {
+            this.rank = rank;
+            this.userId = userId;
+            this.username = username;
+            this.totalMatches = totalMatches;
+            this.wins = wins;
+            this.losses = losses;
+            this.draws = draws;
+            this.winRate = winRate;
+            this.careerScore = careerScore;
+        }
+    }
+
+    /**
      * Retrieves aggregated statistics for a specific user.
      */
     public PlayerStats getPlayerStats(int userId) throws SQLException {
@@ -168,5 +195,53 @@ public class StatisticsDAO {
             }
         }
         return rows;
+    }
+
+    /**
+     * Retrieves global tournament leaderboard ranked by wins and career scores.
+     */
+    public List<LeaderboardRow> getLeaderboard(int limit) throws SQLException {
+        List<LeaderboardRow> leaderboard = new ArrayList<>();
+        Connection conn = DBConnection.getConnection();
+
+        String sql = "SELECT u.user_id, u.username, "
+                + "COUNT(mp.match_player_id) AS total_matches, "
+                + "SUM(CASE WHEN mp.result = 'WIN' THEN 1 ELSE 0 END) AS wins, "
+                + "SUM(CASE WHEN mp.result = 'LOSS' THEN 1 ELSE 0 END) AS losses, "
+                + "SUM(CASE WHEN mp.result = 'DRAW' THEN 1 ELSE 0 END) AS draws, "
+                + "COALESCE(SUM(mp.final_score), 0) AS total_score "
+                + "FROM users u "
+                + "LEFT JOIN match_players mp ON u.user_id = mp.user_id "
+                + "GROUP BY u.user_id, u.username "
+                + "ORDER BY wins DESC, total_score DESC "
+                + "LIMIT ?;";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit <= 0 ? 50 : limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                int rank = 1;
+                while (rs.next()) {
+                    int matches = rs.getInt("total_matches");
+                    int wins = rs.getInt("wins");
+                    int losses = rs.getInt("losses");
+                    int draws = rs.getInt("draws");
+                    int score = rs.getInt("total_score");
+                    double winRate = (matches > 0) ? ((double) wins / matches) * 100.0 : 0.0;
+
+                    leaderboard.add(new LeaderboardRow(
+                            rank++,
+                            rs.getInt("user_id"),
+                            rs.getString("username"),
+                            matches,
+                            wins,
+                            losses,
+                            draws,
+                            winRate,
+                            score
+                    ));
+                }
+            }
+        }
+        return leaderboard;
     }
 }

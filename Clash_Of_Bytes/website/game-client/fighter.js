@@ -1,6 +1,7 @@
 // =======================================================================
 // CLASH OF BYTES: 2D FIGHTER ENTITY CLASS
 // Implements physics, collision hitboxes, state machine, and animation
+// Enhanced with cyber armor rendering, damage lag easing, and forcefields
 // =======================================================================
 
 import { ARENA, CHARACTERS } from './constants.js';
@@ -26,6 +27,7 @@ export class Fighter {
 
     this.maxHp = this.charConfig.baseHp;
     this.hp = this.maxHp;
+    this.lagHp = this.maxHp; // Delayed catch-up HP for arcade health bar trail
     this.baseAttack = this.charConfig.baseAttack;
     this.baseDefense = this.charConfig.baseDefense;
     this.speed = this.charConfig.speed;
@@ -45,6 +47,7 @@ export class Fighter {
     this.stateTimer = 0;
     this.specialCooldownTimer = 0;
     this.comboCounter = 0;
+    this.comboTimer = 0;
     this.score = 0;
     this.roundsWon = 0;
 
@@ -58,6 +61,7 @@ export class Fighter {
     this.vx = 0;
     this.vy = 0;
     this.hp = this.maxHp;
+    this.lagHp = this.maxHp;
     this.facing = faceRight ? 1 : -1;
     this.grounded = true;
     this.state = FighterState.IDLE;
@@ -80,6 +84,18 @@ export class Fighter {
   }
 
   update(dt, opponent, input, particleSystem, soundSystem) {
+    // Easing lagHp for arcade health bar damage trail
+    if (this.lagHp > this.hp) {
+      this.lagHp = Math.max(this.hp, this.lagHp - (this.maxHp * 0.4 * dt));
+    }
+
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) {
+        this.comboCounter = 0;
+      }
+    }
+
     if (this.specialCooldownTimer > 0) {
       this.specialCooldownTimer -= dt;
     }
@@ -112,6 +128,7 @@ export class Fighter {
       }
     }
 
+    // Arena boundary clamp
     const halfW = this.width / 2;
     if (this.x - halfW < 40) {
       this.x = 40 + halfW;
@@ -134,11 +151,12 @@ export class Fighter {
       return;
     }
 
-    if (input.block && this.grounded) {
+    const isDefending = input.defence || input.block;
+    if (isDefending && this.grounded) {
       this.state = FighterState.BLOCKING;
       this.vx = 0;
       return;
-    } else if (this.state === FighterState.BLOCKING && !input.block) {
+    } else if (this.state === FighterState.BLOCKING && !isDefending) {
       this.state = FighterState.IDLE;
     }
 
@@ -165,12 +183,16 @@ export class Fighter {
       }
     }
 
-    if (input.lightAttack) {
+    if (input.attack || input.lightAttack || input.heavyAttack) {
+      this.triggerAttack(soundSystem);
+    }
+  }
+
+  triggerAttack(soundSystem) {
+    if (this.comboCounter % 2 === 0) {
       this.triggerLightAttack(soundSystem);
-    } else if (input.heavyAttack) {
+    } else {
       this.triggerHeavyAttack(soundSystem);
-    } else if (input.special) {
-      this.triggerSpecial(soundSystem);
     }
   }
 
@@ -261,6 +283,7 @@ export class Fighter {
       this.state = FighterState.HITSTUN;
       this.stateTimer = 0.32;
       attacker.comboCounter++;
+      attacker.comboTimer = 2.0;
       attacker.score += Math.round(incomingDmg * 10);
       particleSystem.emitHitSparks(this.x, this.y + 35, attacker.color, hitbox.type === 'SPECIAL' ? 30 : 18);
     }
@@ -286,15 +309,19 @@ export class Fighter {
 
   draw(ctx) {
     ctx.save();
-    const hurtbox = this.getHurtbox();
     const centerX = this.x;
     const isP1 = (this.playerIndex === 1);
+    const facing = this.facing;
+    const hurtbox = this.getHurtbox();
 
+    // 1. Dynamic Contact Ground Shadow
+    const shadowW = this.state === FighterState.KNOCKED_OUT ? this.height * 0.9 : this.width * 0.85;
     ctx.beginPath();
-    ctx.ellipse(centerX, ARENA.GROUND_Y - 4, this.width * 0.7, 8, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.ellipse(centerX, ARENA.GROUND_Y - 4, shadowW / 2, 7, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.fill();
 
+    // 2. Hitstun Flashing
     if (this.state === FighterState.HITSTUN && Math.floor(Date.now() / 40) % 2 === 0) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(hurtbox.x, hurtbox.y, hurtbox.w, hurtbox.h);
@@ -302,63 +329,188 @@ export class Fighter {
       return;
     }
 
-    ctx.shadowBlur = (this.state === FighterState.SPECIAL) ? 20 : 10;
+    // 3. Knockout Rotation Collapse
+    if (this.state === FighterState.KNOCKED_OUT) {
+      ctx.translate(centerX, ARENA.GROUND_Y - 15);
+      ctx.rotate(facing * Math.PI / 2.3);
+      ctx.translate(-centerX, -(ARENA.GROUND_Y - 15));
+    }
+
+    // Breathing / Walk Animation Offsets
+    const breathY = (this.grounded && this.state === FighterState.IDLE) ? Math.sin(Date.now() / 200) * 2.5 : 0;
+    const walkSwing = (this.state === FighterState.WALKING) ? Math.sin(Date.now() / 100) * 12 : 0;
+    const headY = hurtbox.y + 12 + breathY;
+    const torsoY = hurtbox.y + 26 + breathY;
+    const torsoH = this.height * 0.42;
+    const legsY = torsoY + torsoH;
+
+    // --- LEGS & BOOTS ---
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    // Back leg
+    ctx.strokeStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(centerX - (facing * 8), legsY);
+    ctx.lineTo(centerX - (facing * 8) - walkSwing, ARENA.GROUND_Y - 4);
+    ctx.stroke();
+
+    // Front leg
+    ctx.strokeStyle = this.color;
+    ctx.beginPath();
+    ctx.moveTo(centerX + (facing * 8), legsY);
+    ctx.lineTo(centerX + (facing * 8) + walkSwing, ARENA.GROUND_Y - 4);
+    ctx.stroke();
+
+    // Armored Boots
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(centerX + (facing * 8) + walkSwing - (facing > 0 ? 4 : 12), ARENA.GROUND_Y - 10, 16, 8);
+    ctx.fillRect(centerX - (facing * 8) - walkSwing - (facing > 0 ? 4 : 12), ARENA.GROUND_Y - 10, 16, 8);
+
+    // --- ARMORED TORSO & CHEST PLATE ---
+    ctx.shadowBlur = (this.state === FighterState.SPECIAL) ? 22 : 12;
     ctx.shadowColor = this.color;
 
-    const grad = ctx.createLinearGradient(hurtbox.x, hurtbox.y, hurtbox.x + hurtbox.w, hurtbox.y + hurtbox.h);
-    grad.addColorStop(0, this.color);
-    grad.addColorStop(1, this.accentColor);
-    ctx.fillStyle = grad;
+    // Main Torso Armor with Gradient
+    const torsoGrad = ctx.createLinearGradient(hurtbox.x, torsoY, hurtbox.x + hurtbox.w, torsoY + torsoH);
+    torsoGrad.addColorStop(0, this.color);
+    torsoGrad.addColorStop(1, this.accentColor);
+    ctx.fillStyle = torsoGrad;
 
     ctx.beginPath();
     if (ctx.roundRect) {
-      ctx.roundRect(hurtbox.x, hurtbox.y + 18, hurtbox.w, hurtbox.h - 18, 10);
+      ctx.roundRect(hurtbox.x + 4, torsoY, hurtbox.w - 8, torsoH, 8);
     } else {
-      ctx.rect(hurtbox.x, hurtbox.y + 18, hurtbox.w, hurtbox.h - 18);
+      ctx.rect(hurtbox.x + 4, torsoY, hurtbox.w - 8, torsoH);
     }
     ctx.fill();
 
+    // Chest Plate Bevel Detail
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Cyber Energy Core in Center
     ctx.beginPath();
-    ctx.arc(centerX, hurtbox.y + 12, 14, 0, Math.PI * 2);
+    ctx.arc(centerX + (facing * 4), torsoY + torsoH * 0.42, 6, 0, Math.PI * 2);
+    ctx.fillStyle = isP1 ? '#00e5ff' : '#ff2a6d';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.fill();
+
+    // Shoulder Pauldrons
     ctx.fillStyle = '#0f172a';
+    ctx.fillRect(centerX - (facing > 0 ? 18 : 6), torsoY + 2, 12, 12);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(centerX - (facing > 0 ? 18 : 6), torsoY + 2, 12, 12);
+
+    // --- HEAD & VISOR ---
+    ctx.beginPath();
+    ctx.arc(centerX, headY, 15, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b1329';
     ctx.fill();
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = this.color;
     ctx.stroke();
 
+    // Glowing Cybernetic Visor Eye
     ctx.beginPath();
-    const visorX = centerX + (this.facing > 0 ? 2 : -10);
-    ctx.rect(visorX, hurtbox.y + 8, 8, 5);
+    const visorX = centerX + (facing > 0 ? 2 : -11);
+    ctx.rect(visorX, headY - 4, 10, 6);
     ctx.fillStyle = isP1 ? '#00e5ff' : '#ff2a6d';
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 14;
     ctx.shadowColor = ctx.fillStyle;
     ctx.fill();
 
-    if (this.state === FighterState.BLOCKING) {
+    // Cyber Antenna / Crest
+    ctx.beginPath();
+    ctx.moveTo(centerX, headY - 14);
+    ctx.lineTo(centerX + (facing * 6), headY - 24);
+    ctx.strokeStyle = isP1 ? '#00e5ff' : '#ff2a6d';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // --- ARMS & COMBAT POSES ---
+    if (this.state === FighterState.LIGHT_ATTACK || this.state === FighterState.HEAVY_ATTACK) {
+      // Thrusting Arm
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = this.color;
       ctx.beginPath();
-      const shieldX = centerX + (this.facing > 0 ? 25 : -25);
-      ctx.arc(shieldX, hurtbox.y + 45, 35, -Math.PI / 2, Math.PI / 2, this.facing < 0);
-      ctx.strokeStyle = '#ffcc00';
-      ctx.lineWidth = 4;
+      ctx.moveTo(centerX, torsoY + 12);
+      const reach = (this.state === FighterState.HEAVY_ATTACK) ? 46 : 32;
+      ctx.lineTo(centerX + (facing * reach), torsoY + 14);
+      ctx.stroke();
+
+      // Glowing Fist
+      ctx.beginPath();
+      ctx.arc(centerX + (facing * reach), torsoY + 14, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = this.color;
+      ctx.fill();
+    } else if (this.state === FighterState.BLOCKING) {
+      // Guarding Arms
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = this.color;
+      ctx.beginPath();
+      ctx.moveTo(centerX - (facing * 4), torsoY + 10);
+      ctx.lineTo(centerX + (facing * 16), torsoY + 6);
+      ctx.lineTo(centerX + (facing * 16), torsoY + 24);
+      ctx.stroke();
+
+      // Hexagonal Holographic Energy Barrier
+      ctx.save();
+      const barrierX = centerX + (facing * 34);
+      const barrierY = torsoY + 20;
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = '#00ff88';
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI / 3);
+        const bx = barrierX + Math.cos(a) * 32;
+        const by = barrierY + Math.sin(a) * 36;
+        if (i === 0) ctx.moveTo(bx, by);
+        else ctx.lineTo(bx, by);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.22)';
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Idle / Guard Arm
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(centerX, torsoY + 10);
+      ctx.lineTo(centerX + (facing * 14), torsoY + 20);
       ctx.stroke();
     }
 
+    // --- ATTACK SHOCKWAVE CRESCENT ---
     if (this.currentHitbox) {
       const hb = this.currentHitbox;
+      ctx.save();
       ctx.fillStyle = (hb.type === 'SPECIAL') ? 'rgba(255, 42, 109, 0.45)' : 'rgba(0, 229, 255, 0.35)';
       ctx.strokeStyle = (hb.type === 'SPECIAL') ? '#ff2a6d' : '#00e5ff';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = ctx.strokeStyle;
       ctx.beginPath();
-      ctx.arc(centerX + (this.facing * 45), hurtbox.y + 40, (hb.type === 'SPECIAL' ? 55 : 35), -0.6, 0.6, this.facing < 0);
+      ctx.arc(centerX + (facing * 42), torsoY + 16, (hb.type === 'SPECIAL' ? 56 : 38), -0.65, 0.65, facing < 0);
       ctx.stroke();
+      ctx.restore();
     }
 
-    ctx.font = 'bold 12px sans-serif';
+    // --- PLAYER INDICATOR PILL ---
+    ctx.font = 'bold 12px "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = isP1 ? '#00e5ff' : '#ff2a6d';
     ctx.shadowBlur = 8;
     ctx.shadowColor = ctx.fillStyle;
-    ctx.fillText(`P${this.playerIndex}`, centerX, hurtbox.y - 10);
+    ctx.fillText(`P${this.playerIndex} • ${this.name}`, centerX, hurtbox.y - 12);
 
     ctx.restore();
   }

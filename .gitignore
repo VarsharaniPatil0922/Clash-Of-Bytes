@@ -1,0 +1,104 @@
+# =======================================================================
+# CLASH OF BYTES: GITIGNORE CONFIGURATION
+# Production & Academic Repository Protection Rule Set
+# =======================================================================
+
+# -----------------------------------------------------------------------
+# 1. Environment & Secret Configurations
+# -----------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+*.pkcs12
+
+# -----------------------------------------------------------------------
+# 2. Database Files, SQLite Journals & Private Dumps
+# -----------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.db-journal
+clash_of_bytes.db
+**/clash_of_bytes.db
+supabase_data_dump.sql
+**/supabase_data_dump.sql
+migrated_from_sqlite.sql
+**/migrated_from_sqlite.sql
+*.sql.dump
+*dump*.sql
+
+# -----------------------------------------------------------------------
+# 3. Compiled Executables & Native Build Outputs
+# -----------------------------------------------------------------------
+*.exe
+*.o
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.bmp
+screenshot_cg_task3.bmp
+screenshot_cg_task4.bmp
+
+# -----------------------------------------------------------------------
+# 4. Java Build Bytecode & Class Folders
+# -----------------------------------------------------------------------
+*.class
+**/bin/
+bin/
+**/target/
+target/
+
+# -----------------------------------------------------------------------
+# 5. Python Caches & Virtual Environments
+# -----------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# -----------------------------------------------------------------------
+# 6. Server Runtime Logs & Temporary Files
+# -----------------------------------------------------------------------
+*.log
+server.log
+server_error.log
+website/backend/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# -----------------------------------------------------------------------
+# 7. IDE & Editor Temporary Caches
+# -----------------------------------------------------------------------
+.cache/
+.clangd/
+*.suo
+*.user
+*.userosv
+*.sln.docstates
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+
+# -----------------------------------------------------------------------
+# 8. Operating System Files
+# -----------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
