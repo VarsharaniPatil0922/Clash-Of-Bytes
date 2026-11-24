@@ -97,6 +97,13 @@ public final class FighterRosterRegistry {
         if (name == null || name.trim().isEmpty()) {
             throw new InvalidFighterSelectionException("<empty>", "Fighter name query cannot be empty or null.");
         }
+        // Support Kenji and Elena aliases
+        if (name.equalsIgnoreCase("Kenji") && !fighterList.isEmpty()) {
+            return fighterList.get(0);
+        }
+        if (name.equalsIgnoreCase("Elena") && fighterList.size() > 1) {
+            return fighterList.get(1);
+        }
         BaseFighter fighter = fighterMap.get(name);
         if (fighter == null) {
             throw new InvalidFighterSelectionException(name, "No fighter registered under name '" + name + "'.");
@@ -104,8 +111,47 @@ public final class FighterRosterRegistry {
         return fighter;
     }
 
+    /**
+     * Live search: filters fighters by name, class, or archetype query.
+     */
+    public synchronized List<BaseFighter> searchFighters(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>(fighterList);
+        }
+        String q = query.trim().toLowerCase();
+        List<BaseFighter> results = new ArrayList<>();
+        for (BaseFighter f : fighterList) {
+            String nameLower = f.getName().toLowerCase();
+            String classLower = f.getClass().getSimpleName().toLowerCase();
+            boolean matchAlias = false;
+            if (q.contains("kenji") && (nameLower.contains("warrior") || nameLower.contains("ironclad"))) matchAlias = true;
+            if (q.contains("elena") && (nameLower.contains("ninja") || nameLower.contains("shadow"))) matchAlias = true;
+            if (nameLower.contains(q) || classLower.contains(q) || matchAlias) {
+                results.add(f);
+            }
+        }
+        return results;
+    }
+
     public synchronized boolean containsFighter(String name) {
+        if ("Kenji".equalsIgnoreCase(name) || "Elena".equalsIgnoreCase(name)) return true;
         return name != null && fighterMap.containsKey(name);
+    }
+
+    /**
+     * Resolves 0-based fighter index by name or alias.
+     */
+    public synchronized int getFighterIndexByName(String name) {
+        if (name == null || name.trim().isEmpty()) return -1;
+        String trimmed = name.trim();
+        if (trimmed.equalsIgnoreCase("Kenji")) return 0;
+        if (trimmed.equalsIgnoreCase("Elena") && fighterList.size() > 1) return 1;
+        for (int i = 0; i < fighterList.size(); i++) {
+            if (fighterList.get(i).getName().equalsIgnoreCase(trimmed)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public synchronized List<BaseFighter> getAllFighters() {

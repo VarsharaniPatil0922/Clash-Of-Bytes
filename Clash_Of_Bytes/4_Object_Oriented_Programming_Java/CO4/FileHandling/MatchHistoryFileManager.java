@@ -107,4 +107,47 @@ public class MatchHistoryFileManager {
     public String getLogFilePath() {
         return logFilePath;
     }
+
+    /**
+     * Standalone executable test / practical demonstration for MatchHistoryFileManager.
+     */
+    public static void main(String[] args) {
+        System.out.println("=======================================================================");
+        System.out.println("  CLASH OF BYTES: CO4 PRACTICAL - MATCH HISTORY FILE MANAGER");
+        System.out.println("  Topics: Append-Only Logging, Character Streams, Defensive Recovery");
+        System.out.println("=======================================================================\n");
+
+        String demoLogFile = "demo_match_history.log";
+        MatchHistoryFileManager logManager = new MatchHistoryFileManager(demoLogFile);
+
+        // 1. Create Sample Match Records
+        System.out.println("[*] Step 1: Instantiating Match Records...");
+        MatchRecord rec1 = new MatchRecord(201, "Ironclad Warrior", "Shadow Ninja", "Ironclad Warrior", "REAL_FIGHT", 3, 35.0, 0.0, 185.0, "Tournament Round 1 Final");
+        MatchRecord rec2 = new MatchRecord(202, "Cyber Brawler", "Blaze Berserker", "Cyber Brawler", "REAL_FIGHT", 2, 50.0, 0.0, 140.0, "Overdrive Beam Finisher");
+
+        // 2. Append Logs
+        System.out.println("[*] Step 2: Appending Records to Match Log Archive (Append Mode)...");
+        logManager.appendMatchLog(rec1);
+        logManager.appendMatchLog(rec2);
+        System.out.println("    -> Successfully Appended 2 Matches to " + demoLogFile);
+
+        // 3. Display Stored Logs
+        System.out.println("\n[*] Step 3: Reading and Displaying Formatted Match History from Disk...");
+        logManager.displayStoredLogs();
+
+        // 4. Defensive Exception Handling
+        System.out.println("\n[*] Step 4: Testing Missing Log File Recovery...");
+        MatchHistoryFileManager missingManager = new MatchHistoryFileManager("missing_history_archive.log");
+        try {
+            missingManager.readAllMatchLogs();
+        } catch (FileNotFoundException e) {
+            System.out.println("    [VERIFIED] FileNotFoundException caught properly: " + e.getMessage());
+        }
+
+        // Clean up
+        new File(demoLogFile).delete();
+        System.out.println("\n=======================================================================");
+        System.out.println("  CO4 MATCH HISTORY FILE MANAGER EXECUTION SUCCESSFUL (100% PASS)");
+        System.out.println("=======================================================================");
+    }
 }

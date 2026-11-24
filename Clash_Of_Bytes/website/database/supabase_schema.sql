@@ -1,245 +1,136 @@
 -- =======================================================================
--- CLASH OF BYTES: 2D LOCAL MULTIPLAYER FIGHTING GAME
--- SUPABASE POSTGRESQL PRODUCTION DATABASE SCHEMA & RLS POLICIES
--- Target: Supabase PostgreSQL (Port 5432 / 6543)
--- Architecture: Supabase Auth (auth.users) + public.users (UUID)
+--   CLASH OF BYTES : SUPABASE CLOUD DATABASE SCHEMA
+--   Project Reference : vhxbbfoykbdbypylsapr
+-- =======================================================================
+--
+-- HOW TO RUN THIS IN SUPABASE:
+-- 1. Open your Supabase Dashboard:
+--    https://supabase.com/dashboard/project/vhxbbfoykbdbypylsapr/sql/new
+-- 2. Click "SQL Editor" on the left menu -> Click "New query"
+-- 3. Copy and paste all the SQL commands below into the editor.
+-- 4. Click the green "RUN" button (or press Ctrl+Enter).
 -- =======================================================================
 
--- Enable UUID extension if required
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- 1. CLEANUP (Drop existing tables/triggers if re-running)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
 
--- =======================================================================
--- 1. USERS PROFILE TABLE (Linked to auth.users via UUID)
--- =======================================================================
-CREATE TABLE IF NOT EXISTS public.users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- 2. CREATE 'profiles' TABLE (Linked to Supabase Auth Users)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    matches INTEGER DEFAULT 0,
+    highest_damage NUMERIC(8, 2) DEFAULT 0.0,
+    favorite_fighter TEXT DEFAULT 'Ironclad Warrior',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- =======================================================================
--- 2. CHARACTERS TABLE (Canonical 6 Fighter Roster)
--- =======================================================================
-CREATE TABLE IF NOT EXISTS public.characters (
-    character_id BIGSERIAL PRIMARY KEY,
-    character_name VARCHAR(50) NOT NULL UNIQUE,
-    character_description VARCHAR(255) NOT NULL,
-    archetype VARCHAR(50) NOT NULL,
-    base_hp DOUBLE PRECISION NOT NULL,
-    base_attack DOUBLE PRECISION NOT NULL,
-    base_defense DOUBLE PRECISION NOT NULL,
-    speed DOUBLE PRECISION NOT NULL
-);
-
--- =======================================================================
--- 3. MATCHES TABLE (UUID Player References)
--- =======================================================================
-CREATE TABLE IF NOT EXISTS public.matches (
-    match_id BIGSERIAL PRIMARY KEY,
-    match_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    player1_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    player2_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    winner_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-    loser_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-    total_rounds INTEGER NOT NULL DEFAULT 3,
-    player1_rounds_won INTEGER NOT NULL DEFAULT 0,
-    player2_rounds_won INTEGER NOT NULL DEFAULT 0,
-    match_status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED',
-    player1_final_score INTEGER NOT NULL DEFAULT 0,
-    player2_final_score INTEGER NOT NULL DEFAULT 0,
-    match_duration_seconds INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT chk_different_players CHECK (player1_user_id <> player2_user_id)
-);
-
--- =======================================================================
--- 4. MATCH_PLAYERS TABLE (Per-Player Match Telemetry & Character Pick)
--- =======================================================================
-CREATE TABLE IF NOT EXISTS public.match_players (
-    match_player_id BIGSERIAL PRIMARY KEY,
-    match_id BIGINT NOT NULL REFERENCES public.matches(match_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    character_id BIGINT NOT NULL REFERENCES public.characters(character_id) ON DELETE CASCADE,
-    final_score INTEGER NOT NULL DEFAULT 0,
-    rounds_won INTEGER NOT NULL DEFAULT 0,
-    result VARCHAR(10) NOT NULL,
-    CONSTRAINT chk_match_result CHECK (result IN ('WIN', 'LOSS', 'DRAW'))
-);
-
--- =======================================================================
--- 5. MATCH_ROUNDS TABLE (Granular Round Performance Telemetry)
--- =======================================================================
-CREATE TABLE IF NOT EXISTS public.match_rounds (
-    round_id BIGSERIAL PRIMARY KEY,
-    match_id BIGINT NOT NULL REFERENCES public.matches(match_id) ON DELETE CASCADE,
-    round_number INTEGER NOT NULL,
-    winner_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-    loser_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-    player1_score INTEGER NOT NULL DEFAULT 0,
-    player2_score INTEGER NOT NULL DEFAULT 0,
-    round_status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED',
-    duration_seconds INTEGER NOT NULL DEFAULT 0
-);
-
--- =======================================================================
--- 6. INDEXES FOR HIGH-PERFORMANCE LEADERBOARDS & MATCH ARCHIVES
--- =======================================================================
-CREATE INDEX IF NOT EXISTS idx_users_username ON public.users(username);
-CREATE INDEX IF NOT EXISTS idx_matches_p1 ON public.matches(player1_user_id);
-CREATE INDEX IF NOT EXISTS idx_matches_p2 ON public.matches(player2_user_id);
-CREATE INDEX IF NOT EXISTS idx_matches_winner ON public.matches(winner_user_id);
-CREATE INDEX IF NOT EXISTS idx_matches_loser ON public.matches(loser_user_id);
-CREATE INDEX IF NOT EXISTS idx_matches_date ON public.matches(match_date DESC);
-CREATE INDEX IF NOT EXISTS idx_match_players_match ON public.match_players(match_id);
-CREATE INDEX IF NOT EXISTS idx_match_players_user ON public.match_players(user_id);
-CREATE INDEX IF NOT EXISTS idx_match_players_char ON public.match_players(character_id);
-CREATE INDEX IF NOT EXISTS idx_match_rounds_match ON public.match_rounds(match_id);
-
--- =======================================================================
--- 7. AUTOMATIC NEW USER PROFILE TRIGGER (auth.users -> public.users)
--- =======================================================================
+-- 3. AUTOMATIC TRIGGER: Auto-creates a profile row when a user signs up in Java Swing
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.users (id, username, created_at)
+    INSERT INTO public.profiles (id, username, email)
     VALUES (
         NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-        NOW()
+        COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
+        NEW.email
     )
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+    FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 4. CREATE 'match_history' TABLE (Stores match records matching Game Launcher Table layout)
+-- Columns exactly match the Game Table:
+-- [Slot #] [Match Date & Time] [Player 1] [P1 Fighter] [Player 2] [P2 Fighter] [Score / Rounds] [Winner] [Outcome]
+CREATE TABLE IF NOT EXISTS public.match_history (
+    match_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    played_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    player_1 TEXT NOT NULL,
+    p1_fighter TEXT NOT NULL,
+    player_2 TEXT NOT NULL,
+    p2_fighter TEXT NOT NULL,
+    score TEXT NOT NULL,
+    winner TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    player_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    player_name TEXT,
+    result TEXT,
+    rounds_p1 INTEGER DEFAULT 0,
+    rounds_p2 INTEGER DEFAULT 0
+);
+
+-- Quick Schema Migration: Add columns to existing table if already created in Supabase
+ALTER TABLE public.match_history ADD COLUMN IF NOT EXISTS player_1 TEXT;
+ALTER TABLE public.match_history ADD COLUMN IF NOT EXISTS player_2 TEXT;
+ALTER TABLE public.match_history ADD COLUMN IF NOT EXISTS score TEXT;
+ALTER TABLE public.match_history ADD COLUMN IF NOT EXISTS outcome TEXT;
+
+-- Backfill any existing rows so they show up cleanly in the table editor
+UPDATE public.match_history
+SET 
+    player_1 = COALESCE(player_1, player_name),
+    player_2 = COALESCE(player_2, CASE WHEN winner LIKE player_name || '%' THEN p2_fighter ELSE winner END),
+    score = COALESCE(score, rounds_p1 || ' - ' || rounds_p2),
+    outcome = COALESCE(outcome, CASE WHEN result = 'WIN' THEN player_name || ' WON' ELSE winner || ' WON' END)
+WHERE player_1 IS NULL;
+
+-- 5. ENABLE ROW LEVEL SECURITY (RLS)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.match_history ENABLE ROW LEVEL SECURITY;
+
+-- 6. RLS POLICIES (Allows Java Swing application full read/write via anon key)
+DROP POLICY IF EXISTS "Public full access to profiles" ON public.profiles;
+CREATE POLICY "Public full access to profiles"
+    ON public.profiles
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access to match_history" ON public.match_history;
+CREATE POLICY "Public full access to match_history"
+    ON public.match_history
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
+
+-- 7. PERFORMANCE INDEXES
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
+CREATE INDEX IF NOT EXISTS idx_match_history_player ON public.match_history(player_name);
+CREATE INDEX IF NOT EXISTS idx_match_history_played_at ON public.match_history(played_at DESC);
+
+-- 8. AUTOMATIC STATS TRIGGER: Auto-updates 'profiles' (wins, losses, matches) when match is recorded
+CREATE OR REPLACE FUNCTION public.update_profile_stats_on_match()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE public.profiles
+    SET 
+        matches = COALESCE(matches, 0) + 1,
+        wins = COALESCE(wins, 0) + CASE WHEN NEW.result = 'WIN' THEN 1 ELSE 0 END,
+        losses = COALESCE(losses, 0) + CASE WHEN NEW.result = 'LOSS' THEN 1 ELSE 0 END,
+        updated_at = NOW()
+    WHERE (NEW.player_id IS NOT NULL AND id = NEW.player_id)
+       OR (username = NEW.player_name);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_match_history_inserted ON public.match_history;
+CREATE TRIGGER on_match_history_inserted
+    AFTER INSERT ON public.match_history
+    FOR EACH ROW EXECUTE PROCEDURE public.update_profile_stats_on_match();
 
 -- =======================================================================
--- 8. CANONICAL 6 FIGHTER ROSTER SEED DATA (Idempotent)
+-- VERIFICATION QUERY:
+-- Run this query after running the script above to verify the tables exist:
+--
+-- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 -- =======================================================================
-INSERT INTO public.characters (character_id, character_name, character_description, archetype, base_hp, base_attack, base_defense, speed) VALUES
-(1, 'Ironclad Warrior', 'Armored heavy vanguard equipped with crushing greatsword slashes and Titan Guard.', 'WarriorFighter', 115.0, 18.0, 6.0, 5.0),
-(2, 'Blaze Berserker', 'Reckless brawler trading armor defense for devastating fury damage multipliers.', 'BerserkerWarrior', 130.0, 22.0, 4.0, 6.5),
-(3, 'Shadow Ninja', 'Stealth assassin utilizing blinding agility, evasion frames, and shuriken strikes.', 'NinjaFighter', 95.0, 16.0, 4.0, 9.0),
-(4, 'Cyber Brawler', 'High-tech martial artist featuring rapid nanotech combo rushes and cyber barriers.', 'CyberBrawler', 110.0, 19.0, 3.0, 7.0),
-(5, 'Aura Paladin', 'Radiant holy champion channeling blessed aegis barriers and holy radiance strikes.', 'PaladinFighter', 120.0, 17.0, 7.5, 4.5),
-(6, 'Titan Gladiator', 'Colosseum champion master combining raw berserker fury with elemental magma strikes.', 'HybridGladiator', 140.0, 24.0, 8.0, 4.0)
-ON CONFLICT (character_id) DO UPDATE SET
-    character_name = EXCLUDED.character_name,
-    character_description = EXCLUDED.character_description,
-    archetype = EXCLUDED.archetype,
-    base_hp = EXCLUDED.base_hp,
-    base_attack = EXCLUDED.base_attack,
-    base_defense = EXCLUDED.base_defense,
-    speed = EXCLUDED.speed;
-
--- Synchronize characters sequence
-SELECT setval('public.characters_character_id_seq', COALESCE((SELECT MAX(character_id) FROM public.characters), 1));
-
--- =======================================================================
--- 9. SUPABASE ROW LEVEL SECURITY (RLS) POLICIES
--- =======================================================================
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.characters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.match_players ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.match_rounds ENABLE ROW LEVEL SECURITY;
-
--- CHARACTERS: Public read-only for roster display
-DROP POLICY IF EXISTS "Public characters read" ON public.characters;
-CREATE POLICY "Public characters read" ON public.characters
-    FOR SELECT USING (true);
-
--- USERS: Users can read and update only their own profile
-DROP POLICY IF EXISTS "Users can read own profile" ON public.users;
-CREATE POLICY "Users can read own profile" ON public.users
-    FOR SELECT TO authenticated
-    USING (auth.uid() = id);
-
-DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
-CREATE POLICY "Users can update own profile" ON public.users
-    FOR UPDATE TO authenticated
-    USING (auth.uid() = id)
-    WITH CHECK (auth.uid() = id);
-
--- MATCHES: Match participants can view and insert their own matches
-DROP POLICY IF EXISTS "Participants can view matches" ON public.matches;
-CREATE POLICY "Participants can view matches" ON public.matches
-    FOR SELECT TO authenticated
-    USING (auth.uid() = player1_user_id OR auth.uid() = player2_user_id);
-
-DROP POLICY IF EXISTS "Participants can insert matches" ON public.matches;
-CREATE POLICY "Participants can insert matches" ON public.matches
-    FOR INSERT TO authenticated
-    WITH CHECK (auth.uid() = player1_user_id OR auth.uid() = player2_user_id);
-
--- MATCH_PLAYERS: Match participants can view and insert match player telemetry
-DROP POLICY IF EXISTS "Participants can view match_players" ON public.match_players;
-CREATE POLICY "Participants can view match_players" ON public.match_players
-    FOR SELECT TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.matches m
-            WHERE m.match_id = match_players.match_id
-            AND (m.player1_user_id = auth.uid() OR m.player2_user_id = auth.uid())
-        )
-    );
-
-DROP POLICY IF EXISTS "Participants can insert match_players" ON public.match_players;
-CREATE POLICY "Participants can insert match_players" ON public.match_players
-    FOR INSERT TO authenticated
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.matches m
-            WHERE m.match_id = match_players.match_id
-            AND (m.player1_user_id = auth.uid() OR m.player2_user_id = auth.uid())
-        )
-    );
-
--- MATCH_ROUNDS: Match participants can view and insert match round telemetry
-DROP POLICY IF EXISTS "Participants can view match_rounds" ON public.match_rounds;
-CREATE POLICY "Participants can view match_rounds" ON public.match_rounds
-    FOR SELECT TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.matches m
-            WHERE m.match_id = match_rounds.match_id
-            AND (m.player1_user_id = auth.uid() OR m.player2_user_id = auth.uid())
-        )
-    );
-
-DROP POLICY IF EXISTS "Participants can insert match_rounds" ON public.match_rounds;
-CREATE POLICY "Participants can insert match_rounds" ON public.match_rounds
-    FOR INSERT TO authenticated
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.matches m
-            WHERE m.match_id = match_rounds.match_id
-            AND (m.player1_user_id = auth.uid() OR m.player2_user_id = auth.uid())
-        )
-    );
-
--- =======================================================================
--- 10. ROLE-BASED ACCESS CONTROL GRANTS
--- =======================================================================
--- Revoke all public privileges by default
-REVOKE ALL ON public.users FROM public, anon;
-REVOKE ALL ON public.matches FROM public, anon;
-REVOKE ALL ON public.match_players FROM public, anon;
-REVOKE ALL ON public.match_rounds FROM public, anon;
-
--- Grant characters read access to public (anon + authenticated)
-GRANT SELECT ON public.characters TO anon, authenticated;
-
--- Grant profile access to authenticated users (governed by RLS)
-GRANT SELECT, UPDATE ON public.users TO authenticated;
-
--- Grant match access to authenticated users (governed by RLS)
-GRANT SELECT, INSERT ON public.matches TO authenticated;
-GRANT SELECT, INSERT ON public.match_players TO authenticated;
-GRANT SELECT, INSERT ON public.match_rounds TO authenticated;
-
--- Grant sequence usage for auto-incrementing serial primary keys
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;

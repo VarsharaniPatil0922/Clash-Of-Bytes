@@ -53,13 +53,16 @@ protected:
     Hitbox activeHitbox;
     int currentDamage;
     int comboCount;
+    float hitStopTimer;
 
-    // Movement constants
-    const float MOVE_SPEED = 240.0f;
-    const float JUMP_FORCE = 680.0f;
-    const float GRAVITY = 1500.0f;
+    // Movement constants & Street Fighter style physics tuning
+    const float MOVE_FORWARD_SPEED = 275.0f;
+    const float MOVE_BACKWARD_SPEED = 215.0f;
+    const float MOVE_SPEED = 250.0f;
+    const float JUMP_FORCE = 720.0f;
+    const float GRAVITY = 1600.0f;
     const float GROUND_Y = 140.0f;
-    const float GROUND_FRICTION = 950.0f;
+    const float GROUND_FRICTION = 1100.0f;
 
 public:
     Fighter(int pIndex, const std::string& name, float startX, float startY, bool faceRight, float hp, float atk, float def);
@@ -75,6 +78,12 @@ public:
 
     // Getters & Recovery
     Vector2D getPosition() const { return position; }
+    void setPositionX(float x) { position.x = x; }
+    void setPositionY(float y) { position.y = y; }
+    Vector2D getVelocity() const { return velocity; }
+    void setVelocity(const Vector2D& v) { velocity = v; }
+    bool isGroundedState() const { return isGrounded; }
+
     float getHealth() const { return health; }
     float getMaxHealth() const { return maxHealth; }
     bool isAlive() const { return health > 0.0f; }
@@ -85,6 +94,10 @@ public:
     std::string getName() const { return characterName; }
     FighterState getState() const { return currentState; }
     int getCombo() const { return comboCount; }
+    float getAnimTimer() const { return animTimer; }
+    float getStateTimer() const { return stateTimer; }
+
+    void triggerHitStop(float duration = 0.06f) { hitStopTimer = duration; }
 
     Hitbox getHurtboxWorld() const;
     Hitbox getActiveHitboxWorld() const;

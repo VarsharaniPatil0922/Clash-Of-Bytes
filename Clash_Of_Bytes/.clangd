@@ -13,9 +13,9 @@ CompileFlags:
     - C:/msys64/ucrt64/include/c++/16.1.0/backward
     - -isystem
     - C:/msys64/ucrt64/include
-    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_task3 new/Clash_Of_Bytes/1_Computer_Graphics
-    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_task3 new/Clash_Of_Bytes/2_Programming_Laboratory_DSA
-    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_task3 new/Clash_Of_Bytes/3_Computer_Organization_Architecture
+    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_latest (2)/clash_of_bytes_milestone1_latest/1_Computer_Graphics
+    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_latest (2)/clash_of_bytes_milestone1_latest/2_Programming_Laboratory_DSA
+    - -IC:/Users/Varsharani/Downloads/2ND YEAR/FightingGame/clash_of_bytes_milestone1_latest (2)/clash_of_bytes_milestone1_latest/3_Computer_Organization_Architecture
     - -I1_Computer_Graphics
     - -I2_Programming_Laboratory_DSA
     - -I3_Computer_Organization_Architecture

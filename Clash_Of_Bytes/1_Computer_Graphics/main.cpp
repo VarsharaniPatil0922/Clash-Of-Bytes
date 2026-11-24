@@ -34,7 +34,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         // Parse command line arguments for player character selection & game mode
         int p1Type = 0;
         int p2Type = 1;
-        GameMode initialMode = GameMode::TUTORIAL;
+        GameMode initialMode = GameMode::REAL_FIGHT; // Authentic arcade fight by default
 
         std::string fullCmd = GetCommandLineA();
         if (lpCmdLine && strlen(lpCmdLine) > 0) {
@@ -42,9 +42,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             fullCmd += lpCmdLine;
         }
 
-        // Look for --p1 or -p1
-        size_t p1Pos = fullCmd.find("--p1");
-        if (p1Pos == std::string::npos) p1Pos = fullCmd.find("-p1");
+        // Look for --p1name
+        std::string p1PlayerName = "Player 1";
+        size_t p1NamePos = fullCmd.find("--p1name");
+        if (p1NamePos != std::string::npos) {
+            size_t valStart = fullCmd.find_first_not_of(" \t=", p1NamePos + 8);
+            if (valStart != std::string::npos) {
+                size_t valEnd = fullCmd.find_first_of(" \t-", valStart);
+                p1PlayerName = fullCmd.substr(valStart, (valEnd == std::string::npos) ? std::string::npos : (valEnd - valStart));
+            }
+        }
+
+        // Look for --p2name
+        std::string p2PlayerName = "Player 2";
+        size_t p2NamePos = fullCmd.find("--p2name");
+        if (p2NamePos != std::string::npos) {
+            size_t valStart = fullCmd.find_first_not_of(" \t=", p2NamePos + 8);
+            if (valStart != std::string::npos) {
+                size_t valEnd = fullCmd.find_first_of(" \t-", valStart);
+                p2PlayerName = fullCmd.substr(valStart, (valEnd == std::string::npos) ? std::string::npos : (valEnd - valStart));
+            }
+        }
+
+        // Look for --p1 or -p1 (type index)
+        size_t p1Pos = fullCmd.find("--p1 ");
+        if (p1Pos == std::string::npos) p1Pos = fullCmd.find("-p1 ");
+        if (p1Pos == std::string::npos && fullCmd.find("--p1name") == std::string::npos) p1Pos = fullCmd.find("--p1");
         if (p1Pos != std::string::npos) {
             size_t numStart = fullCmd.find_first_of("0123456789", p1Pos);
             if (numStart != std::string::npos) {
@@ -75,6 +98,52 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
+        // Look for --rounds or -rounds
+        int totalRounds = 3;
+        size_t roundsPos = fullCmd.find("--rounds");
+        if (roundsPos == std::string::npos) roundsPos = fullCmd.find("-rounds");
+        if (roundsPos != std::string::npos) {
+            size_t numStart = fullCmd.find_first_of("0123456789", roundsPos);
+            if (numStart != std::string::npos) {
+                totalRounds = std::atoi(fullCmd.c_str() + numStart);
+                if (totalRounds < 1) totalRounds = 1;
+                if (totalRounds > 5) totalRounds = 5;
+            }
+        }
+
+        // Look for --time or -time or --timer
+        float roundTime = 60.0f;
+        size_t timePos = fullCmd.find("--time");
+        if (timePos == std::string::npos) timePos = fullCmd.find("-time");
+        if (timePos == std::string::npos) timePos = fullCmd.find("--timer");
+        if (timePos != std::string::npos) {
+            size_t numStart = fullCmd.find_first_of("0123456789", timePos);
+            if (numStart != std::string::npos) {
+                int parsedTime = std::atoi(fullCmd.c_str() + numStart);
+                if (parsedTime >= 900) {
+                    roundTime = 999.0f; // Infinite practice mode
+                } else if (parsedTime > 0) {
+                    roundTime = static_cast<float>(parsedTime);
+                }
+            }
+        }
+
+        // Look for --arena or -arena
+        ArenaTheme initialTheme = ArenaTheme::MANSION; // Default to Mansion Themed Arena
+        size_t arenaPos = fullCmd.find("--arena");
+        if (arenaPos == std::string::npos) arenaPos = fullCmd.find("-arena");
+        if (arenaPos != std::string::npos) {
+            std::string arenaSub = fullCmd.substr(arenaPos);
+            for (char &c : arenaSub) c = (char)std::tolower((unsigned char)c);
+            if (arenaSub.find("dojo") != std::string::npos || arenaSub.find("practice") != std::string::npos) {
+                initialTheme = ArenaTheme::PRACTICE_DOJO;
+            } else if (arenaSub.find("cyber") != std::string::npos) {
+                initialTheme = ArenaTheme::CYBER_ARENA;
+            } else if (arenaSub.find("mansion") != std::string::npos) {
+                initialTheme = ArenaTheme::MANSION;
+            }
+        }
+
         // Look for --capture or -capture for automated screenshot verification
         std::string capturePath = "";
         int captureAfterFrames = -1;
@@ -85,7 +154,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             captureAfterFrames = 45; // Capture after 45 frames of active rendering
         }
 
-        GameMatch match(p1Type, p2Type, initialMode);
+        GameMatch match(p1Type, p2Type, initialMode, totalRounds, roundTime, initialTheme);
+        match.setPlayerNames(p1PlayerName, p2PlayerName);
         if (fullCmd.find("--syllabus") != std::string::npos || fullCmd.find("-syllabus") != std::string::npos) {
             match.setShowSyllabusMonitor(true);
         }

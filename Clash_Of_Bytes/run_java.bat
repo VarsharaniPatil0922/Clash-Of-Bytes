@@ -3,11 +3,6 @@ cd /d "%~dp0"
 
 set "JDK_JAVA="
 
-if exist "C:\Program Files\Java\latest\jdk-27\bin\java.exe" (
-    set "JDK_JAVA=C:\Program Files\Java\latest\jdk-27\bin\java.exe"
-    goto :FOUND_JAVA
-)
-
 if exist "jdk\bin\java.exe" (
     set "JDK_JAVA=jdk\bin\java.exe"
     goto :FOUND_JAVA

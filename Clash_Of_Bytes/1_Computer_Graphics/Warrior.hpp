@@ -8,8 +8,8 @@ public:
     Warrior(int pIndex, float startX, float startY, bool faceRight);
     void render(Renderer& renderer, bool debugHitboxes) override;
     void executeSpecial() override;
-    std::string getSpecialMoveName() const override { return "TITAN SHIELD BASH"; }
-    std::string getRoleName() const override { return "Vanguard (High HP, Heavy Shield)"; }
+    std::string getSpecialMoveName() const override { return "HADOKEN (DRAGON FLAME)"; }
+    std::string getRoleName() const override { return "Kenji - Martial Arts Master (Hadoken / Shoryuken)"; }
 };
 
 #endif // WARRIOR_HPP

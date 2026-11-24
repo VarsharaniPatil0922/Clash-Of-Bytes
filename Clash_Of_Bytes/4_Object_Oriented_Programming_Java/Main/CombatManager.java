@@ -23,6 +23,7 @@ import CO3.Exceptions.InvalidMatchConfigurationException;
 import CO3.Testing.CO3PracticalTestSuite;
 import CO4.FileHandling.FighterDataFileManager;
 import CO4.FileHandling.MatchHistoryFileManager;
+import CO4.Generics.GenericBattleArchive;
 import CO4.Generics.GenericFighterRepository;
 import CO4.Testing.CO4PracticalTestSuite;
 
@@ -278,36 +279,36 @@ public class CombatManager {
         System.out.println("\n" + logger.getFormattedLog());
 
         // =======================================================================
-        // INTERACTIVE MENU LOOP WITH INPUT VALIDATION (CO3 EXCEPTION HANDLING)
+        // INTERACTIVE MENU LOOP WITH INPUT VALIDATION (CO3 & CO4 RUNNER)
         // =======================================================================
         boolean running = true;
         while (running) {
             System.out.println("=======================================================================");
             System.out.println("  MATCH ACTIONS:");
             System.out.println("  [1] Launch C++ 60 FPS Real-Time Arcade Game (clash_of_bytes.exe)");
-            System.out.println("  [2] View Complete Match Summary Log & Collections History");
-            System.out.println("  [3] Open Java Swing Game Launcher & Fighter Selection Dashboard (CO3)");
-            System.out.println("  [4] Run Automated CO3 Practical Test Suite (Collections & Exceptions)");
-            System.out.println("  [5] Run Automated CO4 Practical Test Suite (File Handling & Java Generics)");
-            System.out.println("  [6] Export / Save Fighter Roster to File (CO4 File Handling)");
-            System.out.println("  [7] View Persistent Match History Logs from File (CO4 File Handling)");
-            System.out.println("  [8] Open Database Desktop Main Menu & Two-Player Arena Hub (Swing / JDBC)");
-            System.out.println("  [9] Exit");
+            System.out.println("  [2] View Complete Match Summary Log & Collections History (CO1-CO3)");
+            System.out.println("  [3] Open Java Swing Game Launcher & Fighter Selection Dashboard (CO3 GUI)");
+            System.out.println("  [4] Run Automated CO3 Practical Test Suite (Collections & Exceptions - 40 Tests)");
+            System.out.println("  [5] Run Automated CO4 Practical Test Suite (File Handling & Generics - 13 Tests)");
+            System.out.println("  [6] Export Fighter Roster to File (CO4 File Handling - FighterDataFileManager)");
+            System.out.println("  [7] View Stored Match Logs from Disk (CO4 File Handling - MatchHistoryFileManager)");
+            System.out.println("  [8] Exit");
             System.out.println("=======================================================================");
-            System.out.print("Enter choice [1-9]: ");
+            System.out.print("Enter choice [1-8]: ");
 
             int choice = -1;
-            String inputLine = scanner.hasNextLine() ? scanner.nextLine().trim() : "";
+            if (!scanner.hasNextLine()) {
+                System.out.println("\nNo further input detected. Exiting.");
+                break;
+            }
+            String inputLine = scanner.nextLine().trim();
             try {
-                if (inputLine.isEmpty()) {
-                    if (scanner.hasNextLine()) inputLine = scanner.nextLine().trim();
-                }
                 choice = Integer.parseInt(inputLine);
-                if (choice < 1 || choice > 9) {
-                    throw new InvalidMatchConfigurationException("MenuChoice", choice, "Integer between 1 and 9");
+                if (choice < 1 || choice > 8) {
+                    throw new InvalidMatchConfigurationException("MenuChoice", choice, "Integer between 1 and 8");
                 }
             } catch (NumberFormatException nfe) {
-                System.out.println("\n[VALIDATION WARNING] Please enter a valid numerical option [1-9].\n");
+                System.out.println("\n[VALIDATION WARNING] Please enter a valid numerical option [1-8].\n");
                 continue;
             } catch (InvalidMatchConfigurationException ex) {
                 System.out.println("\n[VALIDATION WARNING] " + ex.getFormattedMessage() + "\n");
@@ -339,37 +340,51 @@ public class CombatManager {
                 });
                 System.out.println("[SUCCESS] Java Swing GUI opened on desktop!\n");
             } else if (choice == 4) {
-                System.out.println("\n[*] Executing Automated CO3 Practical Test Suite...\n");
+                System.out.println("\n[*] Executing Automated CO3 Practical Test Suite (40 Tests)...\n");
                 CO3PracticalTestSuite suite = new CO3PracticalTestSuite();
                 suite.runAllTests();
             } else if (choice == 5) {
-                System.out.println("\n[*] Executing Automated CO4 Practical Test Suite (File Handling & Generics)...\n");
-                CO4PracticalTestSuite.main(new String[0]);
+                System.out.println("\n[*] Executing Automated CO4 Practical Test Suite (File Handling & Generics - 13 Tests)...\n");
+                CO4PracticalTestSuite.runAllTests();
             } else if (choice == 6) {
-                System.out.println("\n[*] Exporting Fighter Roster to 'fighters_database.csv' via CO4 File Handling...");
-                List<BaseFighter> fightersList = new java.util.ArrayList<>();
-                for (BaseFighter f : roster) {
-                    fightersList.add(f);
-                }
-                FighterDataFileManager fileMgr = new FighterDataFileManager("fighters_database.csv");
-                boolean saved = fileMgr.saveFightersToFile(fightersList);
+                System.out.println("\n[*] Exporting Active Fighter Roster to File using FighterDataFileManager (CO4)...");
+                String rosterFilePath = "fighters_database.csv";
+                FighterDataFileManager fileMgr = new FighterDataFileManager(rosterFilePath);
+                boolean saved = fileMgr.saveFightersToFile(registry.getAllFighters());
                 if (saved) {
-                    System.out.println("[SUCCESS] Roster saved to " + new java.io.File("fighters_database.csv").getAbsolutePath());
+                    System.out.println("[SUCCESS] Exported " + registry.getFighterCount() + " fighters to: " + rosterFilePath);
+                    try {
+                        List<String[]> rows = fileMgr.loadFighterRecords();
+                        System.out.println("--- Verified Loaded Records from " + rosterFilePath + " (" + rows.size() + " fighters) ---");
+                        for (String[] r : rows) {
+                            System.out.println("  -> " + String.join(" | ", r));
+                        }
+                    } catch (Exception e) {
+                        System.out.println("[ERROR] Failed reading back exported file: " + e.getMessage());
+                    }
                 } else {
-                    System.out.println("[ERROR] Failed to save roster to file.");
+                    System.out.println("[ERROR] Failed to export fighters to file.");
                 }
+                System.out.println();
             } else if (choice == 7) {
-                System.out.println("\n[*] Reading Persistent Match Logs via CO4 File Handling...");
-                MatchHistoryFileManager logMgr = new MatchHistoryFileManager("match_history.log");
-                logMgr.displayStoredLogs();
+                System.out.println("\n[*] Reading Persistent Match Logs from Disk via MatchHistoryFileManager (CO4)...");
+                String logPath = "match_history.log";
+                MatchHistoryFileManager matchFileMgr = new MatchHistoryFileManager(logPath);
+                try {
+                    List<String> logs = matchFileMgr.readAllMatchLogs();
+                    if (logs.isEmpty() && !historyManager.getAllRecords().isEmpty()) {
+                        for (MatchRecord mr : historyManager.getAllRecords()) {
+                            matchFileMgr.appendMatchLog(mr);
+                        }
+                    }
+                } catch (Exception ex) {
+                    for (MatchRecord mr : historyManager.getAllRecords()) {
+                        matchFileMgr.appendMatchLog(mr);
+                    }
+                }
+                matchFileMgr.displayStoredLogs();
+                System.out.println();
             } else if (choice == 8) {
-                System.out.println("\n[*] Launching Database Desktop Main Menu & Two-Player Arena Hub...");
-                javax.swing.SwingUtilities.invokeLater(() -> {
-                    ui.MainMenuFrame mainFrame = new ui.MainMenuFrame();
-                    mainFrame.setVisible(true);
-                });
-                System.out.println("[SUCCESS] Desktop Main Menu & Arena Hub opened on desktop!\n");
-            } else if (choice == 9) {
                 System.out.println("\nSession concluded. Exiting Clash of Bytes.");
                 running = false;
             }

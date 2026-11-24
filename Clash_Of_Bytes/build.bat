@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 
 echo =======================================================================
-echo   CLASH OF BYTES (PRACTICALS 1 TO 4 / TASK 4 COMPLETE) COMPILER
+echo   CLASH OF BYTES (PRACTICALS 1 TO 4) GAME COMPILER
 echo   Subjects: Computer Graphics, DSA, COA and OOP Java
 echo =======================================================================
 echo.
@@ -15,12 +15,12 @@ if exist "C:\msys64\mingw64\bin\g++.exe" (
 )
 
 :: Auto-detect Javac compiler
-if exist "C:\Program Files\Java\latest\jdk-27\bin\javac.exe" (
-    set "JAVAC_CMD=C:\Program Files\Java\latest\jdk-27\bin\javac.exe"
-) else if exist "jdk\bin\javac.exe" (
+if exist "jdk\bin\javac.exe" (
     set "JAVAC_CMD=jdk\bin\javac.exe"
 ) else if exist "..\retro_fighter_2d\jdk\bin\javac.exe" (
     set "JAVAC_CMD=..\retro_fighter_2d\jdk\bin\javac.exe"
+) else if exist "%USERPROFILE%\.vscode\extensions\redhat.java-1.58.0-win32-x64\jre\25.0.4.1-win32-x86_64\bin\javac.exe" (
+    set "JAVAC_CMD=%USERPROFILE%\.vscode\extensions\redhat.java-1.58.0-win32-x64\jre\25.0.4.1-win32-x86_64\bin\javac.exe"
 ) else (
     where javac >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
@@ -55,7 +55,6 @@ if %CXX_ERR% EQU 0 (
     echo [SUCCESS] clash_of_bytes.exe compiled successfully!
 ) else (
     echo [ERROR] C++ Compilation failed with error code %CXX_ERR%!
-    pause
     exit /b %CXX_ERR%
 )
 

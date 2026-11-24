@@ -102,3 +102,9 @@ Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
 ._*
+
+match_result.json
+**/match_result.json
+jdk/
+**/jdk/
+

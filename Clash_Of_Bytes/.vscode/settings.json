@@ -12,5 +12,22 @@
     "C:/msys64/ucrt64/include/**",
     "C:/msys64/ucrt64/include/c++/16.1.0/**",
     "C:/msys64/ucrt64/include/c++/16.1.0/x86_64-w64-mingw32"
-  ]
+  ],
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "${workspaceFolder}/jdk",
+      "default": true
+    }
+  ],
+  "java.project.sourcePaths": ["4_Object_Oriented_Programming_Java"],
+  "java.project.outputPath": "4_Object_Oriented_Programming_Java/bin",
+  "java.project.referencedLibraries": [
+    "4_Object_Oriented_Programming_Java/lib/**/*.jar"
+  ],
+  "code-runner.clearPreviousOutput": true,
+  "code-runner.saveFileBeforeRun": true,
+  "code-runner.executorMap": {
+    "java": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${workspaceFolder}/scripts/run_java_file.ps1\" -FilePath \"$fullFileName\""
+  }
 }

@@ -13,8 +13,8 @@ public:
     void update(float dt) override;
     void render(Renderer& renderer, bool debugHitboxes) override;
     void executeSpecial() override;
-    std::string getSpecialMoveName() const override { return "SHADOW CLONE STRIKE"; }
-    std::string getRoleName() const override { return "Infiltrator (High Agility, Swift Combos)"; }
+    std::string getSpecialMoveName() const override { return "CYCLONE SPIN KICK"; }
+    std::string getRoleName() const override { return "Elena - Capoeira Striker (Spin Kick / Axe Kick)"; }
 };
 
 #endif // NINJA_HPP

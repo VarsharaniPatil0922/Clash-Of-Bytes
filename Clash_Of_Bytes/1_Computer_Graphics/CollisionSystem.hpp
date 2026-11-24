@@ -29,14 +29,20 @@ public:
         if (!p1 || !p2) return;
         if (!p1->isAlive() || !p2->isAlive()) return;
 
-        // 1. Player Body Pushback
-        float dist = p2->getPosition().x - p1->getPosition().x;
-        float minDist = 70.0f;
-        if (std::abs(dist) < minDist) {
-            float pushDir = (dist >= 0.0f) ? 1.0f : -1.0f;
-            // Push apart
-            p1->takeHit(0, -pushDir * 0.2f, false);
-            p2->takeHit(0, pushDir * 0.2f, false);
+        // 1. Player Body Pushback (Only on ground so fighters can jump cross in the air!)
+        if (p1->isGroundedState() && p2->isGroundedState()) {
+            float dist = p2->getPosition().x - p1->getPosition().x;
+            float minDist = 65.0f;
+            if (std::abs(dist) < minDist) {
+                float pushDir = (dist >= 0.0f) ? 1.0f : -1.0f;
+                if (std::abs(dist) < 0.001f) pushDir = p1->isFacingRightDir() ? -1.0f : 1.0f;
+                float overlap = minDist - std::abs(dist);
+                float shift = overlap * 0.5f;
+                float newP1X = std::max(40.0f, std::min(1240.0f, p1->getPosition().x - pushDir * shift));
+                float newP2X = std::max(40.0f, std::min(1240.0f, p2->getPosition().x + pushDir * shift));
+                p1->setPositionX(newP1X);
+                p2->setPositionX(newP2X);
+            }
         }
 
         // Keep fighters facing each other

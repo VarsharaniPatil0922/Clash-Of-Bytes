@@ -23,18 +23,42 @@ public class CO4PracticalTestSuite {
 
     private static int testsPassed = 0;
     private static int testsTotal = 0;
+    private static final List<String> testLog = new ArrayList<>();
+
+    public static int getPassedTests() {
+        return testsPassed;
+    }
+
+    public static int getTotalTests() {
+        return testsTotal;
+    }
+
+    public static List<String> getTestLog() {
+        return new ArrayList<>(testLog);
+    }
 
     private static void assertTrue(String testName, boolean condition) {
         testsTotal++;
+        String logEntry;
         if (condition) {
             testsPassed++;
-            System.out.printf("  [PASS] Test %02d: %s\n", testsTotal, testName);
+            logEntry = String.format("  [PASS] Test %02d: %s", testsTotal, testName);
+            System.out.println(logEntry);
         } else {
-            System.err.printf("  [FAIL] Test %02d: %s\n", testsTotal, testName);
+            logEntry = String.format("  [FAIL] Test %02d: %s", testsTotal, testName);
+            System.err.println(logEntry);
         }
+        testLog.add(logEntry);
     }
 
     public static void main(String[] args) {
+        runAllTests();
+    }
+
+    public static int[] runAllTests() {
+        testsPassed = 0;
+        testsTotal = 0;
+        testLog.clear();
         System.out.println("========================================================================================");
         System.out.println("   CLASH OF BYTES: JAVA OOP PRACTICAL NO. 04 & TASK 4 TEST SUITE (CO4)");
         System.out.println("   Topics: Persistent File Handling & Parametric Polymorphism (Generics)");
@@ -174,5 +198,6 @@ public class CO4PracticalTestSuite {
         System.out.printf("   CO4 TEST RESULTS: %d / %d TESTS PASSED (100%% SUCCESS)\n", testsPassed, testsTotal);
         System.out.println("   COURSE OUTCOME 4 (FILE HANDLING & GENERICS) VERIFICATION COMPLETE!");
         System.out.println("========================================================================================\n");
+        return new int[] { testsPassed, testsTotal };
     }
 }

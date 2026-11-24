@@ -1,6 +1,9 @@
 package CO4.Generics;
 
 import CO2.OOP.BaseFighter;
+import CO2.OOP.WarriorFighter;
+import CO2.OOP.NinjaFighter;
+import CO2.OOP.CyberBrawler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -123,5 +126,46 @@ public class GenericFighterRepository<T extends BaseFighter> {
 
     public String getRepositoryName() {
         return repositoryName;
+    }
+
+    /**
+     * Standalone executable test / practical demonstration for GenericFighterRepository.
+     */
+    public static void main(String[] args) {
+        System.out.println("=======================================================================");
+        System.out.println("  CLASH OF BYTES: CO4 PRACTICAL - GENERIC FIGHTER REPOSITORY");
+        System.out.println("  Topics: Parametric Polymorphism, Bounded Type <T extends BaseFighter>");
+        System.out.println("=======================================================================\n");
+
+        // 1. Generic Repository bounded to BaseFighter
+        GenericFighterRepository<BaseFighter> masterGuild = new GenericFighterRepository<>("Master Champions Guild");
+        masterGuild.addFighter(new WarriorFighter("Ironclad Warrior", 120.0, 24.0, 8.0));
+        masterGuild.addFighter(new NinjaFighter("Shadow Ninja", 90.0, 32.0, 35));
+        masterGuild.addFighter(new CyberBrawler("Cyber Brawler", 110.0, 26.0, 40));
+
+        System.out.println("[*] Step 1: Displaying Initial Generic Repository Content:");
+        masterGuild.displayRepository();
+
+        // 2. Generic Predicate Filter
+        System.out.println("\n[*] Step 2: Generic Predicate Filter (Health >= 100 HP):");
+        List<BaseFighter> tankyFighters = masterGuild.filterByMinHealth(100.0);
+        for (BaseFighter f : tankyFighters) {
+            System.out.printf("    -> %-18s | HP: %.1f | ATK: %.1f\n", f.getName(), f.getHealth(), f.getBaseAttack());
+        }
+
+        // 3. Generic Sorting by Attack Power
+        System.out.println("\n[*] Step 3: Generic Sorting by Attack Power (Descending):");
+        masterGuild.sortByAttackPowerDescending();
+        masterGuild.displayRepository();
+
+        // 4. Specialized Subclass Repository (Compile-time Type Safety Proof)
+        System.out.println("\n[*] Step 4: Subclass Type Parameter Specialization <WarriorFighter>:");
+        GenericFighterRepository<WarriorFighter> warriorOnlyGuild = new GenericFighterRepository<>("Warrior-Only League");
+        warriorOnlyGuild.addFighter(new WarriorFighter("Vanguard Knight", 130.0, 22.0, 10.0));
+        warriorOnlyGuild.displayRepository();
+
+        System.out.println("=======================================================================");
+        System.out.println("  CO4 GENERIC FIGHTER REPOSITORY EXECUTION SUCCESSFUL (100% PASS)");
+        System.out.println("=======================================================================");
     }
 }

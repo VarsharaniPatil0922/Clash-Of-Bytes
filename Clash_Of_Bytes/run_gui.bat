@@ -12,6 +12,8 @@ if exist "jdk\bin\java.exe" (
     set "JAVA_CMD=jdk\bin\java.exe"
 ) else if exist "..\retro_fighter_2d\jdk\bin\java.exe" (
     set "JAVA_CMD=..\retro_fighter_2d\jdk\bin\java.exe"
+) else if exist "%USERPROFILE%\.vscode\extensions\redhat.java-1.58.0-win32-x64\jre\25.0.4.1-win32-x86_64\bin\java.exe" (
+    set "JAVA_CMD=%USERPROFILE%\.vscode\extensions\redhat.java-1.58.0-win32-x64\jre\25.0.4.1-win32-x86_64\bin\java.exe"
 ) else (
     where java >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
@@ -27,10 +29,11 @@ if not defined JAVA_CMD (
     exit /b 1
 )
 
-if not exist "4_Object_Oriented_Programming_Java\bin\CO3\SwingGUI\GameLauncherGUI.class" (
+if not exist "4_Object_Oriented_Programming_Java\bin\CO3\Auth\SupabaseAuthGUI.class" (
     echo [*] GUI classes not compiled yet. Running build.bat first...
     call .\build.bat
 )
 
-echo [*] Launching Cyberpunk Swing GUI on Event Dispatch Thread...
-start "" "%JAVA_CMD%" -cp 4_Object_Oriented_Programming_Java\bin CO3.SwingGUI.GameLauncherGUI %*
+echo [*] Launching Cyberpunk Supabase Authentication Portal on Event Dispatch Thread...
+start "" "%JAVA_CMD%" -cp 4_Object_Oriented_Programming_Java\bin CO3.Auth.SupabaseAuthGUI %*
+

@@ -9,13 +9,24 @@ echo.
 
 set "JDK_JAVA="
 
-if exist "C:\Program Files\Java\latest\jdk-27\bin\java.exe" (
-    set "JDK_JAVA=C:\Program Files\Java\latest\jdk-27\bin\java.exe"
+:: 1. Prioritize bundled portable OpenJDK
+if exist "jdk\bin\java.exe" (
+    set "JDK_JAVA=jdk\bin\java.exe"
     goto :FOUND_JAVA
 )
 
-if exist "jdk\bin\java.exe" (
-    set "JDK_JAVA=jdk\bin\java.exe"
+if exist "..\retro_fighter_2d\jdk\bin\java.exe" (
+    set "JDK_JAVA=..\retro_fighter_2d\jdk\bin\java.exe"
+    goto :FOUND_JAVA
+)
+
+if defined JAVA_HOME if exist "%JAVA_HOME%\bin\java.exe" (
+    set "JDK_JAVA=%JAVA_HOME%\bin\java.exe"
+    goto :FOUND_JAVA
+)
+
+if exist "C:\Program Files\Java\latest\jdk-27\bin\java.exe" (
+    set "JDK_JAVA=C:\Program Files\Java\latest\jdk-27\bin\java.exe"
     goto :FOUND_JAVA
 )
 
@@ -25,10 +36,22 @@ if %ERRORLEVEL% EQU 0 (
     goto :FOUND_JAVA
 )
 
-echo [!] Java runtime was not found in system PATH.
+echo [!] Java runtime was not found in system PATH or bundled jdk folder.
+echo     Please ensure Java is installed or bundled with the project.
 pause
 exit /b 1
 
 :FOUND_JAVA
+if not exist "4_Object_Oriented_Programming_Java\bin\CO4\Testing\CO4PracticalTestSuite.class" (
+    echo [*] Compiling Java OOP classes...
+    call build.bat
+)
+
+echo [*] Using Java runtime: "%JDK_JAVA%"
+echo [*] Executing CO4 Automated Practical Test Suite...
+echo.
+
 "%JDK_JAVA%" -cp "4_Object_Oriented_Programming_Java\bin;4_Object_Oriented_Programming_Java\lib\*" CO4.Testing.CO4PracticalTestSuite %*
+
+echo.
 pause
