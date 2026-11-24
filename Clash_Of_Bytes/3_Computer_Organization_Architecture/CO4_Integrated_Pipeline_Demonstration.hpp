@@ -50,6 +50,7 @@
 #include <cstdint>
 #include "CO1_Prac01_80386_ALU_Simulator.hpp"
 #include "CO4_Prac02_Control_Unit_Decoder.hpp"
+#include "CO4_EducationalPipeline.hpp"
 #include "CO2_Prac03_x86_64_Assembly_Damage_Engine.hpp"
 #include "CO3_Prac04_Algorithmic_and_String_Processing.hpp"
 
@@ -178,6 +179,24 @@ public:
         // STAGE 5: PACKED BCD ARCADE HUD SCORE ENCODING
         // --------------------------------------------------------------------
         trace.packedBcdScore = static_cast<uint32_t>(HexPackedBCDConverter::convertHexToPackedBCD(static_cast<uint64_t>(trace.finalStrikeDamage)));
+
+        // --------------------------------------------------------------------
+        // STAGE 6: EDUCATIONAL 5-STAGE PIPELINE VERIFICATION RUN
+        // --------------------------------------------------------------------
+        // Executes the combat action through the simulated 5-stage pipeline
+        // (IF, ID, EX, MEM, WB) to ensure educational micro-architectural consistency.
+        EducationalPipeline eduPipe(65536);
+        std::vector<std::string> pipeProgram = {
+            "MOV RAX, " + std::to_string(input.baseAttack),
+            "MOV RBX, " + std::to_string(input.baseDefense),
+            "SUB RAX, RBX",
+            "MOV RCX, " + std::to_string(input.comboMultiplier),
+            "MUL RCX",
+            "STORE [0x2000], RAX",
+            "HLT"
+        };
+        eduPipe.loadCombatProgram(pipeProgram);
+        eduPipe.runToCompletion(30);
 
         return trace;
     }

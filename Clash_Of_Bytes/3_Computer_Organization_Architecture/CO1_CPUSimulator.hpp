@@ -318,8 +318,23 @@ public:
         // ======================================================================
         stage.memoryDesc = "No Memory Access";
         if (inst.opcode == Opcode::LOAD) {
-            // LOAD DestReg, [Address]
-            uint64_t addr = inst.isImmediate ? static_cast<uint64_t>(inst.immediateVal) : srcVal;
+            // LOAD DestReg, [Address] or LOAD DestReg, Address
+            uint64_t addr = 0;
+            if (!inst.src.empty() && inst.src.front() == '[' && inst.src.back() == ']') {
+                std::string addrStr = inst.src.substr(1, inst.src.size() - 2);
+                addr = std::stoull(addrStr, nullptr, 0);
+            } else if (inst.isImmediate) {
+                addr = static_cast<uint64_t>(inst.immediateVal);
+            } else if (srcIsReg) {
+                addr = srcVal;
+            } else if (!inst.src.empty()) {
+                try {
+                    addr = std::stoull(inst.src, nullptr, 0);
+                } catch (...) {
+                    addr = 0;
+                }
+            }
+
             if (memory.isValidAddress(addr, 8)) {
                 memory.read64(addr, aluResult);
                 stage.memoryDesc = "Read 64-bit value 0x" + std::to_string(aluResult) + " from Memory [0x" + std::to_string(addr) + "]";
@@ -327,12 +342,23 @@ public:
                 std::cerr << "  [CPU ERROR] Memory LOAD out of bounds at 0x" << addr << "\n";
             }
         } else if (inst.opcode == Opcode::STORE) {
-            // STORE [Address], SrcReg
+            // STORE [Address], SrcReg or STORE Address, SrcReg
             uint64_t addr = 0;
-            if (inst.dest.front() == '[' && inst.dest.back() == ']') {
+            if (!inst.dest.empty() && inst.dest.front() == '[' && inst.dest.back() == ']') {
                 std::string addrStr = inst.dest.substr(1, inst.dest.size() - 2);
                 addr = std::stoull(addrStr, nullptr, 0);
+            } else if (inst.isImmediate) {
+                addr = static_cast<uint64_t>(inst.immediateVal);
+            } else if (destIsReg) {
+                addr = destVal;
+            } else if (!inst.dest.empty()) {
+                try {
+                    addr = std::stoull(inst.dest, nullptr, 0);
+                } catch (...) {
+                    addr = 0;
+                }
             }
+
             if (memory.isValidAddress(addr, 8)) {
                 memory.write64(addr, srcVal);
                 stage.memoryDesc = "Wrote 64-bit value 0x" + std::to_string(srcVal) + " to Memory [0x" + std::to_string(addr) + "]";

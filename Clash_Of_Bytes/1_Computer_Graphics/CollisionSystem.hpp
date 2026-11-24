@@ -9,11 +9,14 @@
 #include "ParticleSystem.hpp"
 #include "CO1_Prac01_OpenGL_Gouraud_Renderer.hpp"
 #include "../3_Computer_Organization_Architecture/CO2_Prac03_x86_64_Assembly_Damage_Engine.hpp"
+#include "../3_Computer_Organization_Architecture/CO3_CombatLogAnalyzer.hpp"
 #include <string>
+#include <algorithm>
 
 class CollisionSystem {
 private:
     std::string latestALUTrace;
+    CombatLogAnalyzer combatLogAnalyzer;
 
     static bool checkAABB(const Hitbox& a, const Hitbox& b) {
         return (a.offsetX < b.offsetX + b.width &&
@@ -24,6 +27,9 @@ private:
 
 public:
     CollisionSystem() : latestALUTrace("WAITING FOR COMBAT HIT...") {}
+
+    CombatLogAnalyzer& getCombatLogAnalyzer() { return combatLogAnalyzer; }
+    const CombatLogAnalyzer& getCombatLogAnalyzer() const { return combatLogAnalyzer; }
 
     void checkCombat(Fighter* p1, Fighter* p2, ParticleSystem& particles, Renderer& renderer) {
         if (!p1 || !p2) return;
@@ -58,12 +64,28 @@ public:
         Hitbox p1Hit = p1->getActiveHitboxWorld();
         Hitbox p2Hurt = p2->getHurtboxWorld();
         if (p1Hit.active && checkAABB(p1Hit, p2Hurt)) {
+            // Check if P2 is guarding/blocking
+            bool p2Blocking = (p2->getState() == FighterState::BLOCKING);
+            uint64_t targetDefense = p2Blocking ? 20 : 6;
+            uint64_t comboFactor = std::max(1, p1->getCombo());
+            bool isSpecial = (p1->getState() == FighterState::SPECIAL_ATTACK);
+            if (isSpecial) comboFactor = std::max<uint64_t>(comboFactor, 2);
+
+            // Record telemetry event in CombatLogAnalyzer
+            if (p2Blocking) {
+                combatLogAnalyzer.recordCombatEvent("P2 BLOCK GUARD DEFENSE ABSORB");
+            } else if (isSpecial) {
+                combatLogAnalyzer.recordCombatEvent("P1 SPECIAL UNLEASHED CRITICAL IMPACT");
+            } else {
+                combatLogAnalyzer.recordCombatEvent("P1 ATTACK HIT CONNECTED");
+            }
+
             // Practical No. 03: REAL 64-BIT ASSEMBLY DAMAGE CALCULATION!
-            CombatALUResult alu = AssemblyDamageEngine::calculateHitDamage(p1->getAttackDamage(), 5, 1);
+            CombatALUResult alu = AssemblyDamageEngine::calculateHitDamage(p1->getAttackDamage(), targetDefense, comboFactor);
             latestALUTrace = "P1 HIT! " + alu.assemblyTrace;
 
             float knockDir = p1->isFacingRightDir() ? 1.0f : -1.0f;
-            p2->takeHit((int)alu.finalDamage, knockDir, p1->getState() == FighterState::SPECIAL_ATTACK);
+            p2->takeHit((int)alu.finalDamage, knockDir, isSpecial);
             p1->clearActiveHitbox();
 
             // Practical No. 02: Bresenham spark emission
@@ -86,12 +108,27 @@ public:
         Hitbox p2Hit = p2->getActiveHitboxWorld();
         Hitbox p1Hurt = p1->getHurtboxWorld();
         if (p2Hit.active && checkAABB(p2Hit, p1Hurt)) {
+            bool p1Blocking = (p1->getState() == FighterState::BLOCKING);
+            uint64_t targetDefense = p1Blocking ? 20 : 6;
+            uint64_t comboFactor = std::max(1, p2->getCombo());
+            bool isSpecial = (p2->getState() == FighterState::SPECIAL_ATTACK);
+            if (isSpecial) comboFactor = std::max<uint64_t>(comboFactor, 2);
+
+            // Record telemetry event in CombatLogAnalyzer
+            if (p1Blocking) {
+                combatLogAnalyzer.recordCombatEvent("P1 BLOCK GUARD DEFENSE ABSORB");
+            } else if (isSpecial) {
+                combatLogAnalyzer.recordCombatEvent("P2 SPECIAL UNLEASHED CRITICAL IMPACT");
+            } else {
+                combatLogAnalyzer.recordCombatEvent("P2 ATTACK HIT CONNECTED");
+            }
+
             // Practical No. 03: REAL 64-BIT ASSEMBLY DAMAGE CALCULATION!
-            CombatALUResult alu = AssemblyDamageEngine::calculateHitDamage(p2->getAttackDamage(), 5, 1);
+            CombatALUResult alu = AssemblyDamageEngine::calculateHitDamage(p2->getAttackDamage(), targetDefense, comboFactor);
             latestALUTrace = "P2 HIT! " + alu.assemblyTrace;
 
             float knockDir = p2->isFacingRightDir() ? 1.0f : -1.0f;
-            p1->takeHit((int)alu.finalDamage, knockDir, p2->getState() == FighterState::SPECIAL_ATTACK);
+            p1->takeHit((int)alu.finalDamage, knockDir, isSpecial);
             p2->clearActiveHitbox();
 
             // Practical No. 02: Bresenham spark emission

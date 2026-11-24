@@ -45,6 +45,7 @@ shift_add_multiply_gas:
 # RCX = multiplicand (M), RDX = multiplier (Q)
 # ------------------------------------------------------------------------------
 booth_multiply_gas:
+    push rbx                    # Preserve non-volatile RBX
     xor rax, rax                # RAX = Accumulator A = 0
     xor r8, r8                  # R8 = Q_-1 = 0
     mov r10, rcx                # R10 = Multiplicand M
@@ -73,6 +74,7 @@ booth_multiply_gas:
     jnz .bm_loop
 
     mov rax, rbx                # Return lower 64-bit product Q
+    pop rbx                     # Restore RBX
     ret
 
 # ------------------------------------------------------------------------------
@@ -81,6 +83,7 @@ booth_multiply_gas:
 # RCX = string address
 # ------------------------------------------------------------------------------
 string_length_gas:
+    push rdi                    # Preserve non-volatile RDI
     test rcx, rcx
     jz .sl_null
 
@@ -92,10 +95,12 @@ string_length_gas:
     not rcx
     dec rcx
     mov rax, rcx
+    pop rdi                     # Restore RDI
     ret
 
 .sl_null:
     xor rax, rax
+    pop rdi                     # Restore RDI
     ret
 
 # ------------------------------------------------------------------------------
@@ -104,6 +109,14 @@ string_length_gas:
 # RCX = text, RDX = textLen, R8 = token, R9 = tokenLen
 # ------------------------------------------------------------------------------
 count_token_occurrences_gas:
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+
     xor rax, rax                # Match count = 0
     test rcx, rcx
     jz .ct_done
@@ -149,4 +162,11 @@ count_token_occurrences_gas:
     jmp .ct_outer
 
 .ct_done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret

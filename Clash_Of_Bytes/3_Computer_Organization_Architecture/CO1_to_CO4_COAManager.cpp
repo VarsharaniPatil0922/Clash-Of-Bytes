@@ -192,6 +192,19 @@ void testCO1_ALUFlagsComprehensive() {
     uint64_t resSar = ALU_Simulator::executeSar(static_cast<uint64_t>(-16LL), 2, flags);
     COA_ASSERT(static_cast<int64_t>(resSar) == -4LL && flags.SF, "SAR (-16) >> 2 = -4 [SF=1]");
 
+    // 10. Signed IMUL Flag and Overflow Tests (Audit Requirement)
+    uint64_t imulNormal = ALU_Simulator::executeImul(12, 5, flags);
+    COA_ASSERT(imulNormal == 60 && !flags.OF && !flags.CF && !flags.SF, 
+               "IMUL normal positive: 12 * 5 = 60 [OF=0, CF=0]");
+
+    uint64_t imulNeg = ALU_Simulator::executeImul(static_cast<uint64_t>(-6LL), 4, flags);
+    COA_ASSERT(static_cast<int64_t>(imulNeg) == -24LL && !flags.OF && !flags.CF && flags.SF, 
+               "IMUL negative result: (-6) * 4 = -24 [SF=1, OF=0]");
+
+    uint64_t imulOverflow = ALU_Simulator::executeImul(0x4000000000000000ULL, 4, flags);
+    COA_ASSERT(flags.OF && flags.CF, 
+               "IMUL signed overflow: large positive product sets OF=1 and CF=1");
+
     std::cout << "\n";
 }
 
@@ -233,6 +246,26 @@ void testCO1_CPUSimulator() {
     cpu.getMemory().read64(0x1000, storedDamage);
     COA_ASSERT(storedDamage == 44, "Memory at [0x1000] successfully holds stored damage: 44 HP");
 
+    // Independent Test for LOAD, STORE, signed multiplication and boundary conditions
+    std::vector<std::string> memAndSignedProgram = {
+        "MOV RAX, 120",
+        "STORE [0x2500], RAX",   // STORE address with bracket syntax
+        "MOV RBX, 0",
+        "LOAD RBX, [0x2500]",    // LOAD into RBX from [0x2500]
+        "MOV RCX, -5",           // Signed negative operand
+        "MUL RCX",               // RAX = RAX * RCX (120 * -5 = -600)
+        "STORE 0x2508, RAX",     // STORE with direct address (no brackets)
+        "LOAD RDX, 0x2508",      // LOAD into RDX from direct address
+        "HLT"
+    };
+    CPUSimulator memCpu(65536, false);
+    COA_ASSERT(memCpu.loadProgram(memAndSignedProgram), "Loaded independent LOAD/STORE/Signed CPU program");
+    memCpu.run();
+
+    COA_ASSERT(memCpu.getRegisters().get64(RegId::RBX) == 120, "LOAD RBX, [0x2500] successfully loaded 120");
+    COA_ASSERT(static_cast<int64_t>(memCpu.getRegisters().get64(RegId::RAX)) == -600LL, "CPU signed MUL: 120 * (-5) = -600");
+    COA_ASSERT(static_cast<int64_t>(memCpu.getRegisters().get64(RegId::RDX)) == -600LL, "LOAD RDX, 0x2508 loaded -600 correctly");
+
     std::cout << "\n  Final CPU Simulator Register Bank:\n";
     cpu.getRegisters().display();
     std::cout << "\n";
@@ -253,6 +286,24 @@ void testCO2_AssemblyEngine() {
     COA_ASSERT(res.rawDifference == 22, "Raw difference: 28 - 6 = 22 HP");
     COA_ASSERT(res.bcdScore == 0x44, "Packed BCD score generated: 0x44");
     COA_ASSERT(!res.ZF && !res.CF, "Hardware flags verified: ZF=0 (conscious), CF=0 (no underflow)");
+
+    // Independent Tests for Attack, Defence, Minimum Damage Clamping, and Combo Calculations
+    CombatALUResult minDmgRes = AssemblyDamageEngine::calculateHitDamage(10, 50, 1);
+    COA_ASSERT(minDmgRes.finalDamage == 4, "Minimum Damage Clamp verified: (10 - 50) clamped to min 4 HP");
+
+    CombatALUResult highComboRes = AssemblyDamageEngine::calculateHitDamage(30, 10, 4);
+    COA_ASSERT(highComboRes.finalDamage == 80, "High Combo Calculation verified: (30 - 10) * 4 = 80 HP");
+
+#if defined(USE_GAS_ASSEMBLY)
+    // Direct call to external GNU Assembler routine to prove actual linkage
+    uint64_t directGas = calculate_combat_damage_gas(28, 6, 2);
+    COA_ASSERT(directGas == 44, "Direct call to calculate_combat_damage_gas: (28 - 6) * 2 = 44 HP");
+
+    uint64_t gasFlags = 0;
+    uint64_t directGasWithFlags = calculate_combat_damage_with_flags_gas(15, 30, 2, &gasFlags);
+    COA_ASSERT(directGasWithFlags == 8, "Direct call with clamp: (15 - 30) clamped to 4, 4 * 2 = 8 HP");
+    COA_ASSERT((gasFlags & 0x01) != 0, "Direct GAS subtraction 15 - 30 set CF=1 (Borrow)");
+#endif
 
     std::cout << "  Live Assembly Trace: " << res.assemblyTrace << "\n\n";
 }
@@ -306,6 +357,31 @@ void testCO3_AlgorithmicAndStringSuite() {
     COA_ASSERT(stats.attackStrikes == 3, "Log Analyzer: 3 ATTACK actions verified");
     COA_ASSERT(stats.blockedAttacks == 1, "Log Analyzer: 1 BLOCK action verified");
     COA_ASSERT(stats.specialMoves == 1, "Log Analyzer: 1 SPECIAL move verified");
+
+    // 6. Direct Verification of GAS routines and boundary conditions
+#if defined(USE_GAS_ASSEMBLY)
+    uint64_t gasShiftAdd = shift_add_multiply_gas(35, 4);
+    COA_ASSERT(gasShiftAdd == 140, "Direct GAS shift_add_multiply_gas: 35 * 4 = 140");
+
+    int64_t gasBooth = booth_multiply_gas(-7, 6);
+    COA_ASSERT(gasBooth == -42, "Direct GAS booth_multiply_gas: (-7) * 6 = -42");
+
+    uint64_t gasStrLen = string_length_gas("HELLOWORLD");
+    COA_ASSERT(gasStrLen == 10, "Direct GAS string_length_gas: 10 bytes");
+
+    uint64_t gasTokenCount = count_token_occurrences_gas("AAA_AAA_AAA", 11, "AAA", 3);
+    COA_ASSERT(gasTokenCount == 3, "Direct GAS count_token_occurrences_gas: 3 occurrences of 'AAA'");
+#endif
+
+    // Boundary conditions: empty token, token longer than text, repeated tokens
+    uint64_t emptyToken = AssemblyStringProcessor::countTokenOccurrences("TEST", "");
+    COA_ASSERT(emptyToken == 0, "Boundary test: empty token returns 0");
+
+    uint64_t tokenTooLong = AssemblyStringProcessor::countTokenOccurrences("SHORT", "LONGER_TOKEN_STRING");
+    COA_ASSERT(tokenTooLong == 0, "Boundary test: token longer than text returns 0");
+
+    uint64_t repeatedTokens = AssemblyStringProcessor::countTokenOccurrences("SPECIAL SPECIAL SPECIAL", "SPECIAL");
+    COA_ASSERT(repeatedTokens == 3, "Boundary test: 3 repeated 'SPECIAL' tokens matched");
 
     logAnalyzer.displayStatistics();
     std::cout << "\n";
@@ -372,6 +448,56 @@ void testCO4_ControlUnitAndPipeline() {
 
     uint64_t branchRAX = branchPipe.getRegisters().get64(RegId::RAX);
     COA_ASSERT(branchRAX == 15, "Branch Hazard resolved! Fall-through instruction flushed, RAX = 15");
+
+    // 4. Dedicated RAW Data Forwarding Tests (EX/MEM and MEM/WB forward)
+    std::cout << "\n  --- Testing Dedicated RAW Data Forwarding (Back-to-Back Dependent Instructions) ---\n";
+    EducationalPipeline rawPipe(65536);
+    std::vector<std::string> rawCode = {
+        "MOV RAX, 10",
+        "ADD RAX, 5",           // RAW dependence: uses RAX immediately produced by MOV
+        "ADD RAX, 3",           // RAW dependence: uses RAX immediately produced by ADD
+        "HLT"
+    };
+    rawPipe.loadCombatProgram(rawCode);
+    rawPipe.runToCompletion(20);
+    COA_ASSERT(rawPipe.getRegisters().get64(RegId::RAX) == 18, 
+               "RAW Data Forwarding verified: 10 + 5 + 3 = 18 without stalls");
+
+    // 5. Test Conditional Branches: JNE, JG, JL, JGE, JLE
+    std::cout << "\n  --- Testing Conditional Branch Instructions (JNE, JG, JL, JGE, JLE) ---\n";
+    EducationalPipeline condPipe(65536);
+    std::vector<std::string> condCode = {
+        "MOV RAX, 20",
+        "CMP RAX, 10",
+        "JG 4",                 // 20 > 10: Branch taken to line 4
+        "MOV RAX, 999",         // FLUSHED
+        "SUB RAX, 5",           // 20 - 5 = 15
+        "CMP RAX, 15",
+        "JNE 9",                // 15 == 15: Not taken!
+        "ADD RAX, 10",          // 15 + 10 = 25
+        "HLT",
+        "MOV RAX, 0",           // Line 9
+        "HLT"
+    };
+    condPipe.loadCombatProgram(condCode);
+    condPipe.runToCompletion(30);
+    COA_ASSERT(condPipe.getRegisters().get64(RegId::RAX) == 25, 
+               "Conditional branches (JG taken, JNE not taken) verified: RAX = 25");
+
+    // 6. Test LOAD and STORE memory access in Pipeline
+    std::cout << "\n  --- Testing Pipeline LOAD & STORE Memory Operations ---\n";
+    EducationalPipeline loadStorePipe(65536);
+    std::vector<std::string> lsCode = {
+        "MOV RAX, 77",
+        "STORE [0x3000], RAX",  // STORE RAX to [0x3000]
+        "MOV RBX, 0",
+        "LOAD RBX, [0x3000]",   // LOAD RBX from [0x3000]
+        "HLT"
+    };
+    loadStorePipe.loadCombatProgram(lsCode);
+    loadStorePipe.runToCompletion(25);
+    COA_ASSERT(loadStorePipe.getRegisters().get64(RegId::RBX) == 77, 
+               "Pipeline LOAD [0x3000] into RBX verified: RBX = 77");
 
     std::cout << "\n";
 }

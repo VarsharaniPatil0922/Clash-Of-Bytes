@@ -54,13 +54,34 @@ public:
         return result;
     }
 
-    // IMUL / MUL: a * b (Preserved from original CO1 practical)
+    // IMUL / MUL: a * b (Signed 64-bit multiplication and flag evaluation)
     static uint64_t executeImul(uint64_t a, uint64_t b, ALUFlags& flags) {
+        int64_t sa = static_cast<int64_t>(a);
+        int64_t sb = static_cast<int64_t>(b);
         uint64_t result = a * b;
+        int64_t sres = static_cast<int64_t>(result);
+
         flags.ZF = (result == 0);
-        flags.CF = (b != 0 && (result / b != a)); // Unsigned product overflow
-        flags.SF = (static_cast<int64_t>(result) < 0);
-        flags.OF = flags.CF;
+        flags.SF = (sres < 0);
+
+        // Standard x86 IMUL flag calculation:
+        // Carry Flag (CF) and Overflow Flag (OF) are set if the full signed product exceeds 64 bits.
+        // Check signed overflow using __int128 if available or 64-bit signed bounds check:
+#if defined(__SIZEOF_INT128__)
+        __int128 fullProd = static_cast<__int128>(sa) * static_cast<__int128>(sb);
+        bool overflow = (fullProd != static_cast<__int128>(sres));
+#else
+        bool overflow = false;
+        if (sa > 0) {
+            if (sb > 0 && sa > INT64_MAX / sb) overflow = true;
+            if (sb < 0 && sb < INT64_MIN / sa) overflow = true;
+        } else if (sa < 0) {
+            if (sb > 0 && sa < INT64_MIN / sb) overflow = true;
+            if (sb < 0 && (sa == -1 ? sb < -INT64_MAX : sb < INT64_MAX / sa)) overflow = true;
+        }
+#endif
+        flags.CF = overflow;
+        flags.OF = overflow;
         return result;
     }
 

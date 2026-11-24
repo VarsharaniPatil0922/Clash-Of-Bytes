@@ -11,6 +11,14 @@
 #include <algorithm>
 #include "CO3_Prac04_Hex_Packed_BCD_Converter.hpp"
 
+// External declarations for GAS routines in CO3_Prac04_Combat_Algorithms_GAS.s
+extern "C" {
+    uint64_t shift_add_multiply_gas(uint64_t multiplicand, uint64_t multiplier);
+    int64_t booth_multiply_gas(int64_t multiplicand, int64_t multiplier);
+    uint64_t string_length_gas(const char* str);
+    uint64_t count_token_occurrences_gas(const char* text, uint64_t textLen, const char* token, uint64_t tokenLen);
+}
+
 /*
  * Subject: Computer Organization & Architecture
  * Course Outcome: CO3 | Practical 04 / Task 3

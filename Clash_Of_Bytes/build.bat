@@ -45,6 +45,8 @@ g++ -std=c++17 -O2 -Wall -mwindows -static -static-libgcc -static-libstdc++ ^
     1_Computer_Graphics/Gladiator.cpp ^
     1_Computer_Graphics/GameMatch.cpp ^
     1_Computer_Graphics/InputManager.cpp ^
+    3_Computer_Organization_Architecture/CO2_Prac03_Combat_Damage_GAS.s ^
+    3_Computer_Organization_Architecture/CO3_Prac04_Combat_Algorithms_GAS.s ^
     -I1_Computer_Graphics -I2_Programming_Laboratory_DSA -I3_Computer_Organization_Architecture ^
     -o clash_of_bytes.exe ^
     -lopengl32 -lgdi32 -luser32
@@ -81,7 +83,12 @@ if %ERRORLEVEL% EQU 0 (
 :: Compile COA Practicals Test Suite
 echo.
 echo [*] Compiling Computer Organization and Architecture (COA) Practicals 01 to 04 and Task 4 Integrated Suite...
-g++ -std=c++17 -O2 -Wall 3_Computer_Organization_Architecture/CO1_to_CO4_COAManager.cpp -o coa_practicals.exe
+g++ -std=c++17 -O2 -Wall -DUSE_GAS_ASSEMBLY ^
+    3_Computer_Organization_Architecture/CO1_to_CO4_COAManager.cpp ^
+    3_Computer_Organization_Architecture/CO2_Prac03_Combat_Damage_GAS.s ^
+    3_Computer_Organization_Architecture/CO3_Prac04_Combat_Algorithms_GAS.s ^
+    -I3_Computer_Organization_Architecture ^
+    -o coa_practicals.exe
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] coa_practicals.exe compiled successfully!
 ) else (

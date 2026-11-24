@@ -23,44 +23,53 @@ struct CombatALUResult {
     std::string assemblyTrace;
 };
 
+// Link external GNU Assembler symbols when compiled and linked via GCC
+extern "C" {
+    uint64_t calculate_combat_damage_gas(uint64_t atk, uint64_t def, uint64_t combo);
+    uint64_t calculate_combat_damage_with_flags_gas(uint64_t atk, uint64_t def, uint64_t combo, uint64_t* outRflags);
+}
+
 class AssemblyDamageEngine {
 public:
     static CombatALUResult calculateHitDamage(uint64_t attackPower, uint64_t defense, uint64_t comboMultiplier) {
         CombatALUResult result;
-        uint64_t netAttack = 0;
-        uint64_t product = 0;
+        uint64_t finalDamage = 0;
         uint64_t rflags = 0;
 
-        // 1. Native x86-64 Assembly: SUBQ (%rbx, %rax) & pushfq to capture CPU hardware EFLAGS
+#if defined(USE_GAS_ASSEMBLY)
+        // Call standalone 64-bit GNU Assembler routine (CO2_Prac03_Combat_Damage_GAS.s)
+        finalDamage = calculate_combat_damage_with_flags_gas(attackPower, defense, comboMultiplier, &rflags);
+        uint64_t netDiff = (attackPower > defense) ? (attackPower - defense) : 4;
+        result.rawDifference = netDiff;
+        result.finalDamage = finalDamage;
+#elif defined(__x86_64__) || defined(_M_X64)
+        // Native x86-64 Inline Assembly Fallback (demonstrating RAX, RBX, CMP, JGE, SUB, IMUL)
+        uint64_t netAttack = 0;
         __asm__ volatile (
             "movq %2, %%rax\n\t"        // Load Attack Power into RAX
             "movq %3, %%rbx\n\t"        // Load Defense into RBX
             "subq %%rbx, %%rax\n\t"     // RAX = RAX - RBX
             "pushfq\n\t"                // Push 64-bit RFLAGS to stack
             "popq %1\n\t"               // Pop RFLAGS into variable
-            "movq %%rax, %0\n\t"        // Save result
-            : "=r" (netAttack), "=r" (rflags)
-            : "r" (attackPower), "r" (defense)
-            : "%rax", "%rbx", "cc"
-        );
-
-        result.rawDifference = netAttack;
-
-        // Clamp minimum base damage to 4
-        if ((int64_t)netAttack < 4) netAttack = 4;
-
-        // 2. Native x86-64 Assembly: IMULQ (%rbx, %rax) for Combo Multiplication
-        __asm__ volatile (
-            "movq %1, %%rax\n\t"        // Net attack in RAX
-            "movq %2, %%rbx\n\t"        // Combo multiplier in RBX
-            "imulq %%rbx, %%rax\n\t"    // RAX = RAX * RBX
+            "cmpq $4, %%rax\n\t"        // Compare net damage to minimum clamp threshold
+            "jge 1f\n\t"                // Conditional jump if RAX >= 4
+            "movq $4, %%rax\n\t"        // Minimum damage clamp
+            "1:\n\t"
+            "imulq %4, %%rax\n\t"       // RAX = RAX * comboMultiplier
             "movq %%rax, %0\n\t"        // Save final damage
-            : "=r" (product)
-            : "r" (netAttack), "r" (comboMultiplier)
+            : "=r" (finalDamage), "=r" (rflags)
+            : "r" (attackPower), "r" (defense), "r" (comboMultiplier)
             : "%rax", "%rbx", "cc"
         );
-
-        result.finalDamage = product;
+        result.rawDifference = (attackPower > defense) ? (attackPower - defense) : 4;
+        result.finalDamage = finalDamage;
+#else
+        // Deterministic C++ fallback for non-x86 platforms
+        uint64_t netAttack = (attackPower > defense) ? (attackPower - defense) : 4;
+        result.rawDifference = netAttack;
+        result.finalDamage = netAttack * comboMultiplier;
+        rflags = (result.finalDamage == 0) ? 0x40 : 0x00;
+#endif
 
         // Parse Hardware EFLAGS (Bit 0: CF, Bit 6: ZF, Bit 7: SF, Bit 11: OF)
         result.CF = (rflags & (1 << 0)) != 0;

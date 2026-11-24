@@ -250,6 +250,10 @@ public:
 
             if (ex_mem.signals.MemRead) {
                 uint64_t addr = ex_mem.aluResult;
+                if (!ex_mem.inst.src.empty() && ex_mem.inst.src.front() == '[' && ex_mem.inst.src.back() == ']') {
+                    std::string aStr = ex_mem.inst.src.substr(1, ex_mem.inst.src.size() - 2);
+                    try { addr = std::stoull(aStr, nullptr, 0); } catch (...) {}
+                }
                 uint64_t val = 0;
                 if (memory.read64(addr, val)) {
                     mem_wb.writeBackData = val;
@@ -259,9 +263,13 @@ public:
             } else if (ex_mem.signals.MemWrite) {
                 // Address resolution
                 uint64_t addr = 0x1000;
-                if (ex_mem.inst.dest.front() == '[' && ex_mem.inst.dest.back() == ']') {
+                if (!ex_mem.inst.dest.empty() && ex_mem.inst.dest.front() == '[' && ex_mem.inst.dest.back() == ']') {
                     std::string aStr = ex_mem.inst.dest.substr(1, ex_mem.inst.dest.size() - 2);
-                    addr = std::stoull(aStr, nullptr, 0);
+                    try { addr = std::stoull(aStr, nullptr, 0); } catch (...) {}
+                } else if (ex_mem.inst.isImmediate) {
+                    addr = static_cast<uint64_t>(ex_mem.inst.immediateVal);
+                } else {
+                    addr = ex_mem.aluResult;
                 }
                 memory.write64(addr, ex_mem.memWriteData);
                 std::cout << "    -> Wrote 64-bit value 0x" << std::hex << ex_mem.memWriteData 
@@ -307,12 +315,26 @@ public:
                 }
             }
 
-            // For STORE instruction (STORE [addr], Reg), src operand is in opB or regValSrc2
-            ex_mem.memWriteData = id_ex.signals.ALUSrc ? id_ex.regValSrc1 : opB;
+            // For STORE instruction (STORE [addr], Reg), address is in dest, value is in src (regValSrc2)
+            if (id_ex.inst.opcode == Opcode::STORE) {
+                ex_mem.memWriteData = opB;
+            } else {
+                ex_mem.memWriteData = id_ex.signals.ALUSrc ? id_ex.regValSrc1 : opB;
+            }
 
             switch (id_ex.inst.opcode) {
                 case Opcode::MOV:
                     res = opB;
+                    break;
+                case Opcode::LOAD:
+                    // LOAD DestReg, [Address]
+                    // In EX stage, calculate address into res so MEM stage can read from it
+                    res = id_ex.signals.ALUSrc ? id_ex.immediate : opB;
+                    break;
+                case Opcode::STORE:
+                    // STORE [Address], SrcReg
+                    // In EX stage, address is resolved for MEM stage
+                    res = id_ex.immediate;
                     break;
                 case Opcode::ADD:
                     res = ALU_Simulator::executeAdd(opA, opB, flags);
@@ -355,7 +377,25 @@ public:
                     ex_mem.branchTarget = id_ex.immediate;
                     break;
                 case Opcode::JE:
+                case Opcode::JZ:
                     ex_mem.branchTaken = flags.ZF;
+                    ex_mem.branchTarget = id_ex.immediate;
+                    break;
+                case Opcode::JNE:
+                case Opcode::JNZ:
+                    ex_mem.branchTaken = !flags.ZF;
+                    ex_mem.branchTarget = id_ex.immediate;
+                    break;
+                case Opcode::JG:
+                    ex_mem.branchTaken = (!flags.ZF && (flags.SF == flags.OF));
+                    ex_mem.branchTarget = id_ex.immediate;
+                    break;
+                case Opcode::JL:
+                    ex_mem.branchTaken = (flags.SF != flags.OF);
+                    ex_mem.branchTarget = id_ex.immediate;
+                    break;
+                case Opcode::JGE:
+                    ex_mem.branchTaken = (flags.SF == flags.OF);
                     ex_mem.branchTarget = id_ex.immediate;
                     break;
                 case Opcode::JLE:
@@ -364,6 +404,7 @@ public:
                     break;
                 case Opcode::HLT:
                     pipelineHalted = true;
+                    if_id.valid = false; // Stop speculatively fetching past HLT
                     break;
                 default:
                     res = opB;
