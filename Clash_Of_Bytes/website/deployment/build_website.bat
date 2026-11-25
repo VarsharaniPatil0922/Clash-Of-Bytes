@@ -29,6 +29,13 @@ echo [*] Step 3: Checking Database Migration Script...
 python "website/database/migrate_sqlite_to_postgres.py"
 echo [SUCCESS] Database migrations generated!
 
+echo [*] Step 4: Compiling React Frontend with Vite...
+cd website\frontend
+call npm install
+call npm run build
+cd ..\..
+echo [SUCCESS] React Frontend compiled into website\frontend\dist\
+
 echo =======================================================================
 echo  WEBSITE BUILD SUCCEEDED! Run 'website\deployment\run_website.bat' to launch!
 echo =======================================================================

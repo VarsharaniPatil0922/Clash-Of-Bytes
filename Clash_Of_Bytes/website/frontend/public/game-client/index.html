@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clash of Bytes — 2D Local Multiplayer Cyber Fighting Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Supabase JS v2 Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-void: #060913;
+      --bg-slate: #0b1329;
+      --bg-card: #101c38;
+      --bg-input: #080d1a;
+      --neon-cyan: #00e5ff;
+      --neon-pink: #ff2a6d;
+      --neon-gold: #ffcc00;
+      --neon-green: #00ff88;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-cyan: rgba(0, 229, 255, 0.35);
+      --border-pink: rgba(255, 42, 109, 0.35);
+      --font-display: 'Orbitron', -apple-system, sans-serif;
+      --font-body: 'Rajdhani', -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(0, 229, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 30%, rgba(255, 42, 109, 0.05) 0%, transparent 40%);
+    }
+    h1, h2, h3, h4, .brand-font {
+      font-family: var(--font-display);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .container { max-width: 1240px; margin: 0 auto; padding: 0 24px; width: 100%; }
+
+    /* NAVBAR */
+    .navbar {
+      background: rgba(11, 19, 41, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-cyan);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+    }
+    .nav-container { display: flex; justify-content: space-between; align-items: center; height: 72px; }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 900;
+      color: #fff; text-shadow: 0 0 12px var(--neon-cyan); cursor: pointer;
+    }
+    .nav-brand span.highlight { color: var(--neon-cyan); }
+    .nav-links { display: flex; gap: 20px; align-items: center; list-style: none; }
+    .nav-item {
+      font-size: 1.05rem; font-weight: 600; letter-spacing: 1px; color: var(--text-muted);
+      cursor: pointer; padding: 6px 12px; border-radius: 4px; transition: all 0.2s ease;
+    }
+    .nav-item:hover, .nav-item.active {
+      color: var(--neon-cyan); background: rgba(0, 229, 255, 0.08); text-shadow: 0 0 8px var(--neon-cyan);
+    }
+    .nav-auth { display: flex; gap: 12px; align-items: center; }
+
+    /* BUTTONS */
+    .btn {
+      font-family: var(--font-display); font-size: 0.9rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer;
+      transition: all 0.25s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-cyan), #0077b6);
+      color: #040711; box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+    }
+    .btn-primary:hover { box-shadow: 0 0 25px rgba(0, 229, 255, 0.8); transform: translateY(-2px); }
+    .btn-secondary {
+      background: rgba(16, 28, 56, 0.85); color: var(--text-main); border: 1px solid var(--border-cyan);
+    }
+    .btn-secondary:hover { background: rgba(0, 229, 255, 0.15); border-color: var(--neon-cyan); }
+    .btn-danger {
+      background: linear-gradient(135deg, var(--neon-pink), #9b0028); color: #fff;
+      box-shadow: 0 0 15px rgba(255, 42, 109, 0.4);
+    }
+    .btn-danger:hover { box-shadow: 0 0 25px rgba(255, 42, 109, 0.8); transform: translateY(-2px); }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+    .btn-lg { padding: 14px 34px; font-size: 1.1rem; }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border-cyan); border-radius: 8px;
+      padding: 24px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4); position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    }
+    .card-pink { border-color: var(--border-pink); }
+    .card-pink::before { background: linear-gradient(90deg, transparent, var(--neon-pink), transparent); }
+
+    /* FORMS */
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+    .form-input {
+      width: 100%; padding: 12px 14px; background: var(--bg-input); border: 1px solid #1e293b;
+      border-radius: 4px; color: #fff; font-family: inherit; font-size: 1rem;
+    }
+    .form-input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0, 229, 255, 0.35); }
+
+    /* STATS & BADGES */
+    .stat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
+    .stat-name { width: 65px; color: var(--text-muted); }
+    .stat-bar-bg { flex: 1; height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+    .stat-bar-fill { height: 100%; border-radius: 4px; }
+    .stat-val { width: 35px; text-align: right; font-weight: 700; color: #fff; }
+
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .badge-win { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-loss { background: rgba(255, 42, 109, 0.15); color: var(--neon-pink); border: 1px solid var(--neon-pink); }
+
+    /* DATA TABLE */
+    .data-table-container { overflow-x: auto; border-radius: 6px; border: 1px solid #1e293b; }
+    .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .data-table th {
+      background: #0f172a; color: var(--neon-cyan); font-family: var(--font-display);
+      font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; padding: 14px 16px; border-bottom: 2px solid var(--border-cyan);
+    }
+    .data-table td { padding: 12px 16px; border-bottom: 1px solid #1e293b; font-size: 0.95rem; color: #cbd5e1; }
+    .data-table tr:hover { background: rgba(0, 229, 255, 0.04); }
+
+    /* CANVASES */
+    .canvas-container {
+      border: 2px solid var(--neon-cyan); box-shadow: 0 0 25px rgba(0, 229, 255, 0.35);
+      border-radius: 8px; overflow: hidden; background: #000; display: inline-block;
+    }
+    canvas { display: block; width: 960px; height: 540px; max-width: 100%; }
+
+    
+    /* COMPUTER GRAPHICS (CG) ACADEMIC LAB STYLES */
+    .cg-canvas-container {
+      border: 1px solid var(--border-cyan); border-radius: 8px; overflow: hidden;
+      background: #060913; box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin: 16px 0;
+      position: relative;
+    }
+    .cg-canvas {
+      display: block; width: 100% !important; max-width: 860px; height: 420px !important;
+      background: #060913; cursor: crosshair;
+    }
+    .cg-prac-card {
+      background: var(--bg-card); border: 1px solid var(--border-cyan); border-radius: 8px;
+      padding: 26px; margin-bottom: 34px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      position: relative; overflow: hidden; transition: all 0.3s ease;
+    }
+    .cg-prac-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    }
+    .cg-prac-card.highlighted {
+      box-shadow: 0 0 35px var(--neon-cyan); border-color: var(--neon-cyan);
+    }
+    .cg-task-btn.active {
+      background: var(--neon-cyan) !important; color: #040711 !important;
+      box-shadow: 0 0 15px rgba(0,229,255,0.6);
+    }
+    .cg-math-box {
+      background: rgba(8, 13, 26, 0.9); border: 1px solid #1e293b; border-left: 3px solid var(--neon-cyan);
+      border-radius: 4px; padding: 14px 18px; margin: 14px 0; font-size: 0.9rem; line-height: 1.6;
+    }
+    .cg-controls-bar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 14px 0;
+      background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 6px; border: 1px solid #1e293b;
+    }
+    .cg-telemetry-box {
+      background: #050811; border: 1px solid #1e293b; border-radius: 6px; padding: 12px 16px;
+      margin: 12px 0; font-family: monospace; font-size: 0.85rem; line-height: 1.5; color: #cbd5e1;
+    }
+    .code-viewer {
+      background: #050811; border: 1px solid #1e293b; border-radius: 6px; margin-top: 16px; overflow: hidden;
+    }
+    .code-viewer summary {
+      padding: 10px 16px; background: #0b1329; cursor: pointer; font-family: var(--font-display);
+      font-size: 0.85rem; font-weight: 700; color: var(--neon-cyan); letter-spacing: 1px;
+      display: flex; justify-content: space-between; align-items: center; user-select: none;
+    }
+    .code-viewer summary:hover { background: rgba(0, 229, 255, 0.1); }
+    .code-content {
+      padding: 16px; margin: 0; overflow-x: auto; font-family: "Courier New", Courier, monospace;
+      font-size: 0.82rem; color: #cbd5e1; max-height: 380px; line-height: 1.5; background: #03060d;
+    }
+
+    /* VIEWS */
+    .view-section { display: none; padding: 36px 0 60px; }
+    .view-section.active { display: block; }
+
+    /* FOOTER */
+    .footer {
+      background: #040711; border-top: 1px solid #1e293b; padding: 26px 0;
+      text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <div class="nav-brand" onclick="switchView('home')">
+        <span>CLASH OF <span class="highlight">BYTES</span></span>
+      </div>
+      <ul class="nav-links">
+        <li class="nav-item active" id="nav-home" onclick="switchView('home')">Home</li>
+        <li class="nav-item" id="nav-cg" onclick="switchView('cg')">CG Practicals</li>
+        <li class="nav-item" id="nav-select" onclick="switchView('select')">Fighters</li>
+        <li class="nav-item" id="nav-play" onclick="switchView('play')">Battle Arena</li>
+        <li class="nav-item" id="nav-dashboard" onclick="switchView('dashboard')">Dashboard</li>
+        <li class="nav-item" id="nav-history" onclick="switchView('history')">Match History</li>
+        <li class="nav-item" id="nav-leaderboard" onclick="switchView('leaderboard')">Leaderboard</li>
+      </ul>
+      <div class="nav-auth" id="authNavContainer">
+        <button class="btn btn-secondary btn-sm" onclick="switchView('auth')">Sign In / Register</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- VIEW 1: HOME -->
+  <section class="view-section active" id="view-home">
+    <div class="container">
+      <div style="text-align: center; padding: 40px 0 60px;">
+        <div style="display: inline-block; padding: 6px 16px; background: rgba(0, 229, 255, 0.1); border: 1px solid var(--border-cyan); border-radius: 20px; font-size: 0.85rem; color: var(--neon-cyan); margin-bottom: 20px;">
+          &bull; 2D LOCAL MULTIPLAYER CYBER ARCADE &bull;
+        </div>
+        <h1 style="font-size: 3.4rem; color: #fff; line-height: 1.15; text-shadow: 0 0 25px rgba(0, 229, 255, 0.4); margin-bottom: 18px;">
+          CLASH OF <span style="color: var(--neon-cyan);">BYTES</span>
+        </h1>
+        <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 720px; margin: 0 auto 34px;">
+          Next-generation browser fighting arena. Command 6 cybernetic warriors, execute frame-accurate combos, and record live combat telemetry.
+        </p>
+        <div style="display: flex; gap: 16px; justify-content: center;">
+          <button class="btn btn-primary btn-lg" onclick="switchView('play')">Enter Battle Arena &rarr;</button>
+          <button class="btn btn-secondary btn-lg" onclick="switchView('select')">Select Fighters</button>
+        </div>
+      </div>
+
+      <!-- Academic CG Showcase Banner -->
+      <div class="card" style="margin-bottom: 40px; border-color: var(--neon-cyan); background: linear-gradient(135deg, rgba(16,28,56,0.95), rgba(8,13,26,0.95)); box-shadow: 0 0 25px rgba(0,229,255,0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+          <div>
+            <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan); margin-bottom: 8px;">MIT AOE EXAM REFORM GUIDELINES &bull; 2310218L</span>
+            <h2 style="color: #fff; margin-bottom: 6px;">Computer Graphics Laboratory — Tasks 1 to 4 Complete</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 700px;">
+              Access and run all prescribed Computer Graphics practicals directly in the browser: Cohen–Sutherland 2D Line Clipping, Bresenham Line & Circle VFX, Scan-Line Polygon Health Bars, 3D Matrix Transformations, and Procedural Texture Lighting with verified C++ OpenGL source code.
+            </p>
+          </div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="switchView('cg')">Explore CG Lab &rarr;</button>
+            <button class="btn btn-secondary" onclick="scrollToCgPractical('cg-prac-clipping')">⚡ Line Clipping (Prac 05)</button>
+            <button class="btn btn-secondary" onclick="scrollToCgPractical('cg-prac-spinning-cube')">🎲 Spinning Cube (Prac 04)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature Badges -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 50px;">
+        <div class="card">
+          <h3 style="color: var(--neon-cyan); margin-bottom: 8px;">60 FPS Fixed Engine</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Native HTML5 Canvas loop with deterministic physics, Gouraud shaders, and AABB hurtbox/hitbox calculations.
+          </p>
+        </div>
+        <div class="card card-pink">
+          <h3 style="color: var(--neon-pink); margin-bottom: 8px;">Dual-Player Local Combat</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Both players battle on the same keyboard with full simultaneous key rollover. P1: [A][D] Move, [W] Jump, [F] Attack, [G] Defence &bull; P2: [←][→] Move, [↑] Jump, [K] Attack, [L] Defence.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--neon-gold); margin-bottom: 8px;">Live Database Telemetry</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Completed matches, round-by-round telemetry, and player career rankings commit directly to the backend database.
+          </p>
+        </div>
+      </div>
+
+      <!-- Fighter Preview Roster -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+        <h2>Canonical Fighters</h2>
+        <button class="btn btn-secondary btn-sm" onclick="switchView('select')">View All 6 &rarr;</button>
+      </div>
+      <div id="homeFighterCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+        <!-- Injected dynamically from /api/characters -->
+      </div>
+    </div>
+  </section>
+
+
+  <!-- VIEW 8: COMPUTER GRAPHICS (CG) ACADEMIC PRACTICALS LABORATORY -->
+  <section class="view-section" id="view-cg">
+    <div class="container">
+      <!-- Section Header -->
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; padding: 6px 18px; background: rgba(0, 229, 255, 0.12); border: 1px solid var(--border-cyan); border-radius: 20px; font-size: 0.85rem; color: var(--neon-cyan); margin-bottom: 14px;">
+          &bull; MIT ACADEMY OF ENGINEERING &bull; COURSE CODE: 2310218L &bull;
+        </div>
+        <h1 style="font-size: 2.8rem; color: #fff; text-shadow: 0 0 20px rgba(0, 229, 255, 0.5); margin-bottom: 10px;">
+          COMPUTER GRAPHICS <span style="color: var(--neon-cyan);">LABORATORY</span>
+        </h1>
+        <p style="font-size: 1.1rem; color: var(--text-muted); max-width: 820px; margin: 0 auto 24px;">
+          Interactive web demonstrators, mathematical algorithmic formulations, and original C++ OpenGL source implementations for all prescribed syllabus tasks (Tasks 1 to 4) and Course Outcomes (CO1 to CO6).
+        </p>
+
+        <!-- Academic Task Filter Tabs -->
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
+          <button class="btn btn-secondary btn-sm cg-task-btn active" id="btn-cg-task-all" onclick="filterCgTasks('all')">All Tasks (1–4)</button>
+          <button class="btn btn-secondary btn-sm cg-task-btn" id="btn-cg-task-1" onclick="filterCgTasks('1')">Task 1: Architecture & Drawing (CO1, CO3)</button>
+          <button class="btn btn-secondary btn-sm cg-task-btn" id="btn-cg-task-2" onclick="filterCgTasks('2')">Task 2: Transformations & Line Clipping (CO2, CO5)</button>
+          <button class="btn btn-secondary btn-sm cg-task-btn" id="btn-cg-task-3" onclick="filterCgTasks('3')">Task 3: Textures & Lighting (CO6)</button>
+          <button class="btn btn-secondary btn-sm cg-task-btn" id="btn-cg-task-4" onclick="filterCgTasks('4')">Task 4: Scan-Line & Rendering Engine (CO3, CO4)</button>
+          <button class="btn btn-primary btn-sm" onclick="scrollToCgPractical('cg-prac-clipping')">⚡ Jump to Line Clipping (Prac 05)</button>
+        </div>
+      </div>
+
+      <!-- PRACTICAL 05 (TASK 2 / CO5): COHEN-SUTHERLAND 2D LINE CLIPPING ALGORITHM -->
+      <div class="cg-prac-card" id="cg-prac-clipping" data-task="2">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 2: TRANSFORMATIONS & CLIPPING</span>
+              <span class="badge badge-win">CO5: LINE CLIPPING ALGORITHMS [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 05</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">Cohen–Sutherland 2D Line Clipping Algorithm</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Textbook 4-bit region outcodes, bitwise trivial accept/reject, and parametric boundary intersection computation against viewport bounds.
+            </p>
+          </div>
+          <div style="text-align: right;">
+            <div id="cgClipStatus"><span class="badge badge-win">INITIALIZED</span></div>
+          </div>
+        </div>
+
+        <!-- Theory & Math Formulation -->
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">Mathematical Principle & Bitwise Outcode Mapping:</strong><br>
+          Viewport defined by boundaries: <code>[Xmin, Ymin, Xmax, Ymax]</code>. Each endpoint is assigned a 4-bit region code <code>[TOP | BOTTOM | RIGHT | LEFT]</code>:<br>
+          &bull; <strong>INSIDE (0000 = 0)</strong>: Point lies within viewport.<br>
+          &bull; <strong>LEFT (0001 = 1)</strong>: <code>x &lt; Xmin</code> &bull; <strong>RIGHT (0010 = 2)</strong>: <code>x &gt; Xmax</code><br>
+          &bull; <strong>BOTTOM (0100 = 4)</strong>: <code>y &gt; Ymax</code> &bull; <strong>TOP (1000 = 8)</strong>: <code>y &lt; Ymin</code><br>
+          &bull; <strong>Trivial Accept:</strong> <code>(code0 | code1) == 0000</code> &rarr; Entire line segment is inside and visible.<br>
+          &bull; <strong>Trivial Reject:</strong> <code>(code0 &amp; code1) != 0000</code> &rarr; Both points share an exterior zone; line lies completely outside.<br>
+          &bull; <strong>Intersection Equations:</strong> For crossing lines: <code>x = x0 + (x1 - x0) * (y_boundary - y0) / (y1 - y0)</code> and <code>y = y0 + (y1 - y0) * (x_boundary - x0) / (x1 - x0)</code>.<br>
+          &bull; <strong>Clash of Bytes Application:</strong> In <code>GameMatch.cpp</code> line 228, actively clips dynamic laser beams against combat viewport <code>[280, 160, 1000, 520]</code>.
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="cg-controls-bar">
+          <span style="font-size: 0.85rem; color: #94a3b8; font-weight: bold;">Interactive Scenarios:</span>
+          <button class="btn btn-secondary btn-sm" onclick="setClippingPreset('diagonal')">Preset 1: Diagonal Crossing</button>
+          <button class="btn btn-secondary btn-sm" onclick="setClippingPreset('inside')">Preset 2: Trivial Accept</button>
+          <button class="btn btn-secondary btn-sm" onclick="setClippingPreset('outside')">Preset 3: Trivial Reject</button>
+          <button class="btn btn-secondary btn-sm" onclick="setClippingPreset('corner')">Preset 4: Corner Cross</button>
+          <button class="btn btn-primary btn-sm" onclick="setClippingPreset('laser')">⚡ Clash of Bytes Combat Laser</button>
+          <span style="font-size: 0.8rem; color: var(--neon-cyan); margin-left: auto;">💡 Tip: You can drag endpoints P0 and P1 directly on the canvas!</span>
+        </div>
+
+        <!-- Interactive Canvas -->
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasClipping" class="cg-canvas" width="860" height="440"></canvas>
+        </div>
+
+        <!-- Live Step-by-Step Calculation Telemetry -->
+        <div class="cg-telemetry-box" id="cgClipDetails">
+          Calculating Cohen-Sutherland region outcodes and edge intersections...
+        </div>
+
+        <!-- C++ Source Code Accordion -->
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO5_Prac05_Cohen_Sutherland_Clipping.hpp</code></span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-clipping')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-clipping"><code>#ifndef CO5_PRAC05_COHEN_SUTHERLAND_CLIPPING_HPP
+#define CO5_PRAC05_COHEN_SUTHERLAND_CLIPPING_HPP
+
+#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+
+/*
+ * Subject: Computer Graphics
+ * Course Outcome: CO5 | Practical 05
+ * Topic: Cohen-Sutherland 2D Line Clipping Algorithm
+ * Purpose: Clips a 2D line segment against a rectangular viewport using 4-bit region outcodes.
+ */
+
+class CohenSutherlandClipping {
+public:
+    // 4-bit region outcodes
+    static const int INSIDE = 0; // 0000
+    static const int LEFT   = 1; // 0001
+    static const int RIGHT  = 2; // 0010
+    static const int BOTTOM = 4; // 0100
+    static const int TOP    = 8; // 1000
+
+    // Compute 4-bit region code for point (x, y) relative to clipping window [xmin, ymin, xmax, ymax]
+    static int computeOutCode(double x, double y, double xmin, double ymin, double xmax, double ymax) {
+        int code = INSIDE;
+
+        if (x &lt; xmin) {
+            code |= LEFT;
+        } else if (x &gt; xmax) {
+            code |= RIGHT;
+        }
+
+        if (y &lt; ymin) {
+            code |= BOTTOM;
+        } else if (y &gt; ymax) {
+            code |= TOP;
+        }
+
+        return code;
+    }
+
+    // Cohen-Sutherland line clipping algorithm
+    // Clips line segment from (x0, y0) to (x1, y1) against clipping window
+    // Returns true if any portion of the line is visible (accepted), false if completely outside (rejected)
+    static bool clipLine(double&amp; x0, double&amp; y0, double&amp; x1, double&amp; y1,
+                         double xmin, double ymin, double xmax, double ymax) {
+        int code0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
+        int code1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);
+        bool accept = false;
+
+        while (true) {
+            if ((code0 | code1) == 0) {
+                // Trivial accept: both endpoints are inside viewport
+                accept = true;
+                break;
+            } else if ((code0 &amp; code1) != 0) {
+                // Trivial reject: both endpoints share an outside zone
+                break;
+            } else {
+                // Line crosses the clipping boundary; calculate intersection point
+                double x = 0.0, y = 0.0;
+                // Pick an endpoint that is outside the clipping window
+                int codeOut = code0 ? code0 : code1;
+
+                if (codeOut &amp; TOP) {
+                    // Point is above the clipping window
+                    x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
+                    y = ymax;
+                } else if (codeOut &amp; BOTTOM) {
+                    // Point is below the clipping window
+                    x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
+                    y = ymin;
+                } else if (codeOut &amp; RIGHT) {
+                    // Point is to the right of clipping window
+                    y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
+                    x = xmax;
+                } else if (codeOut &amp; LEFT) {
+                    // Point is to the left of clipping window
+                    y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
+                    x = xmin;
+                }
+
+                // Update the outside endpoint coordinates and recompute its outcode
+                if (codeOut == code0) {
+                    x0 = x;
+                    y0 = y;
+                    code0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
+                } else {
+                    x1 = x;
+                    y1 = y;
+                    code1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);
+                }
+            }
+        }
+
+        return accept;
+    }
+
+    // Standalone unit test verifying algorithm correctness with a line crossing the viewport
+    static void testClipping() {
+        std::cout &lt;&lt; &quot;\n=======================================================\n&quot;;
+        std::cout &lt;&lt; &quot;  COMPUTER GRAPHICS - PRACTICAL 05: COHEN-SUTHERLAND\n&quot;;
+        std::cout &lt;&lt; &quot;  Line Clipping Algorithm Test Verification\n&quot;;
+        std::cout &lt;&lt; &quot;=======================================================\n&quot;;
+
+        double xmin = 100.0, ymin = 100.0, xmax = 400.0, ymax = 300.0;
+        std::cout &lt;&lt; &quot;Clipping Viewport: [&quot; &lt;&lt; xmin &lt;&lt; &quot;, &quot; &lt;&lt; ymin &lt;&lt; &quot;] to [&quot; &lt;&lt; xmax &lt;&lt; &quot;, &quot; &lt;&lt; ymax &lt;&lt; &quot;]\n\n&quot;;
+
+        // Test 1: Line crossing viewport
+        double x0 = 50.0, y0 = 50.0, x1 = 450.0, y1 = 350.0;
+        std::cout &lt;&lt; &quot;Test 1 - Line Crossing Viewport:\n&quot;;
+        std::cout &lt;&lt; &quot;  Original Endpoints: (&quot; &lt;&lt; x0 &lt;&lt; &quot;, &quot; &lt;&lt; y0 &lt;&lt; &quot;) -&gt; (&quot; &lt;&lt; x1 &lt;&lt; &quot;, &quot; &lt;&lt; y1 &lt;&lt; &quot;)\n&quot;;
+
+        bool visible = clipLine(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
+        std::cout &lt;&lt; &quot;  Clipping Result   : &quot; &lt;&lt; (visible ? &quot;ACCEPTED (Visible)&quot; : &quot;REJECTED (Invisible)&quot;) &lt;&lt; &quot;\n&quot;;
+        if (visible) {
+            std::cout &lt;&lt; &quot;  Clipped Endpoints : (&quot; &lt;&lt; std::fixed &lt;&lt; std::setprecision(1) &lt;&lt; x0 
+                      &lt;&lt; &quot;, &quot; &lt;&lt; y0 &lt;&lt; &quot;) -&gt; (&quot; &lt;&lt; x1 &lt;&lt; &quot;, &quot; &lt;&lt; y1 &lt;&lt; &quot;)\n&quot;;
+        }
+
+        // Test 2: Completely outside line
+        double ox0 = 10.0, oy0 = 10.0, ox1 = 50.0, oy1 = 80.0;
+        std::cout &lt;&lt; &quot;\nTest 2 - Line Completely Outside (Trivial Reject):\n&quot;;
+        std::cout &lt;&lt; &quot;  Original Endpoints: (&quot; &lt;&lt; ox0 &lt;&lt; &quot;, &quot; &lt;&lt; oy0 &lt;&lt; &quot;) -&gt; (&quot; &lt;&lt; ox1 &lt;&lt; &quot;, &quot; &lt;&lt; oy1 &lt;&lt; &quot;)\n&quot;;
+        bool outVisible = clipLine(ox0, oy0, ox1, oy1, xmin, ymin, xmax, ymax);
+        std::cout &lt;&lt; &quot;  Clipping Result   : &quot; &lt;&lt; (outVisible ? &quot;ACCEPTED&quot; : &quot;TRIVIAL REJECT&quot;) &lt;&lt; &quot;\n&quot;;
+
+        std::cout &lt;&lt; &quot;=======================================================\n\n&quot;;
+    }
+};
+
+#endif // CO5_PRAC05_COHEN_SUTHERLAND_CLIPPING_HPP
+</code></pre>
+        </details>
+      </div>
+
+      <!-- PRACTICAL 02A (TASK 1 & 4 / CO3): BRESENHAM LINE DRAWING -->
+      <div class="cg-prac-card" id="cg-prac-bresenham-line" data-task="1">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 1: DRAWING ALGORITHMS</span>
+              <span class="badge badge-win">CO3: 2D/3D OBJECT ALGORITHMS [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 02A</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">Bresenham's Integer Line Drawing Algorithm</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Precise integer decision variable line rasterization without floating-point division or trigonometry.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">Decision Variable Mathematical Formula:</strong><br>
+          For slope <code>0 &le; m &le; 1</code>: Initial decision parameter <code>d0 = 2&Delta;y - &Delta;x</code>.<br>
+          At step <code>k</code>: If <code>dk &lt; 0</code>, select pixel <code>(xk + 1, yk)</code> and <code>d(k+1) = dk + 2&Delta;y</code>.<br>
+          If <code>dk &ge; 0</code>, select pixel <code>(xk + 1, yk + 1)</code> and <code>d(k+1) = dk + 2&Delta;y - 2&Delta;x</code>.<br>
+          &bull; <strong>In-Game Application:</strong> Powers hitspark particle rays, sword slash trails, and laser trajectories in <code>CO3_Prac02_Bresenham_Line_Circle_VFX.hpp</code>.
+        </div>
+
+        <div class="cg-controls-bar">
+          <span style="font-size: 0.85rem; color: #94a3b8; font-weight: bold;">Presets:</span>
+          <button class="btn btn-secondary btn-sm" onclick="setBresenhamLinePreset('shallow')">Shallow (0 &lt; m &lt; 1)</button>
+          <button class="btn btn-secondary btn-sm" onclick="setBresenhamLinePreset('steep')">Steep (m &gt; 1)</button>
+          <button class="btn btn-secondary btn-sm" onclick="setBresenhamLinePreset('negative')">Negative Slope</button>
+          <button class="btn btn-secondary btn-sm" onclick="setBresenhamLinePreset('horizontal')">Horizontal Line</button>
+        </div>
+
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasBresenhamLine" class="cg-canvas" width="860" height="380"></canvas>
+        </div>
+
+        <div class="cg-telemetry-box" id="cgBresenhamLineLog">
+          Rasterizing integer grid line...
+        </div>
+
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO3_Prac02_Bresenham_Line_Circle_VFX.hpp</code> (Line Routine)</span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-bresenham-line')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-bresenham-line"><code>#ifndef CO3_PRAC02_BRESENHAM_LINE_CIRCLE_VFX_HPP
+#define CO3_PRAC02_BRESENHAM_LINE_CIRCLE_VFX_HPP
+
+#include &lt;cmath&gt;
+#include &lt;GL/gl.h&gt;
+
+/*
+ * Subject: Computer Graphics
+ * Course Outcome: CO3 | Practical 02
+ * Topic: Bresenham&#x27;s Line &amp; 8-Way Symmetric Circle Drawing Algorithm
+ * In-Game Application: Dynamic hitsparks, slash rays, and circular shield barriers
+ * operating entirely on integer decision parameters without trigonometric functions!
+ */
+class BresenhamVFX {
+public:
+    // Integer-based Bresenham Line Drawing
+    static void drawLine(int x1, int y1, int x2, int y2, float r, float g, float b) {
+        int dx = std::abs(x2 - x1);
+        int dy = std::abs(y2 - y1);
+        int sx = (x1 &lt; x2) ? 1 : -1;
+        int sy = (y1 &lt; y2) ? 1 : -1;
+        int err = dx - dy;
+
+        glColor3f(r, g, b);
+        glBegin(GL_POINTS);
+        while (true) {
+            glVertex2i(x1, y1);
+            if (x1 == x2 &amp;&amp; y1 == y2) break;
+            int e2 = 2 * err;
+            if (e2 &gt; -dy) {
+                err -= dy;
+                x1 += sx;
+            }
+            if (e2 &lt; dx) {
+                err += dx;
+                y1 += sy;
+            }
+        }
+        glEnd();
+    }
+
+    // Integer-based 8-Way Symmetric Bresenham Circle Drawing
+    static void drawCircle(int xc, int yc, int radius, float r, float g, float b) {
+        int x = 0;
+        int y = radius;
+        int d = 3 - 2 * radius; // Initial decision parameter
+
+        glColor3f(r, g, b);
+        glBegin(GL_POINTS);
+        while (y &gt;= x) {
+            // Plot all 8 octants
+            glVertex2i(xc + x, yc + y);
+            glVertex2i(xc - x, yc + y);
+            glVertex2i(xc + x, yc - y);
+            glVertex2i(xc - x, yc - y);
+            glVertex2i(xc + y, yc + x);
+            glVertex2i(xc - y, yc + x);
+            glVertex2i(xc + y, yc - x);
+            glVertex2i(xc - y, yc - x);
+
+            if (d &gt; 0) {
+                y--;
+                d = d + 4 * (x - y) + 10;
+            } else {
+                d = d + 4 * x + 6;
+            }
+            x++;
+        }
+        glEnd();
+    }
+};
+
+#endif // CO3_PRAC02_BRESENHAM_LINE_CIRCLE_VFX_HPP
+</code></pre>
+        </details>
+      </div>
+
+      <!-- PRACTICAL 02B (TASK 1 & 4 / CO3): BRESENHAM 8-WAY SYMMETRIC CIRCLE -->
+      <div class="cg-prac-card" id="cg-prac-bresenham-circle" data-task="1">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 1: DRAWING ALGORITHMS</span>
+              <span class="badge badge-win">CO3: 2D/3D OBJECT ALGORITHMS [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 02B</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">Bresenham's 8-Way Symmetric Circle Drawing Algorithm</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Octant reflection symmetry using integer decision parameter <code>d = 3 - 2R</code>, generating all 8 octants simultaneously.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">8-Way Symmetry & Decision Parameter:</strong><br>
+          Start at <code>(0, R)</code> with initial decision <code>d0 = 3 - 2R</code>.<br>
+          At each step: If <code>d &lt; 0: d = d + 4x + 6, x = x + 1</code>.<br>
+          If <code>d &ge; 0: d = d + 4(x - y) + 10, x = x + 1, y = y - 1</code>.<br>
+          Plot all 8 symmetrical octants: <code>(xc &plusmn; x, yc &plusmn; y)</code> and <code>(xc &plusmn; y, yc &plusmn; x)</code>.<br>
+          &bull; <strong>In-Game Application:</strong> Renders expanding circular shockwave rings, shield barriers, and burst auras.
+        </div>
+
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasBresenhamCircle" class="cg-canvas" width="860" height="420"></canvas>
+        </div>
+
+        <div class="cg-telemetry-box" id="cgBresenhamCircleLog">
+          Computing 8-way symmetric circumference points...
+        </div>
+
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO3_Prac02_Bresenham_Line_Circle_VFX.hpp</code> (Circle Routine)</span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-bresenham-circle')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-bresenham-circle"><code>#ifndef CO3_PRAC02_BRESENHAM_LINE_CIRCLE_VFX_HPP
+#define CO3_PRAC02_BRESENHAM_LINE_CIRCLE_VFX_HPP
+
+#include &lt;cmath&gt;
+#include &lt;GL/gl.h&gt;
+
+/*
+ * Subject: Computer Graphics
+ * Course Outcome: CO3 | Practical 02
+ * Topic: Bresenham&#x27;s Line &amp; 8-Way Symmetric Circle Drawing Algorithm
+ * In-Game Application: Dynamic hitsparks, slash rays, and circular shield barriers
+ * operating entirely on integer decision parameters without trigonometric functions!
+ */
+class BresenhamVFX {
+public:
+    // Integer-based Bresenham Line Drawing
+    static void drawLine(int x1, int y1, int x2, int y2, float r, float g, float b) {
+        int dx = std::abs(x2 - x1);
+        int dy = std::abs(y2 - y1);
+        int sx = (x1 &lt; x2) ? 1 : -1;
+        int sy = (y1 &lt; y2) ? 1 : -1;
+        int err = dx - dy;
+
+        glColor3f(r, g, b);
+        glBegin(GL_POINTS);
+        while (true) {
+            glVertex2i(x1, y1);
+            if (x1 == x2 &amp;&amp; y1 == y2) break;
+            int e2 = 2 * err;
+            if (e2 &gt; -dy) {
+                err -= dy;
+                x1 += sx;
+            }
+            if (e2 &lt; dx) {
+                err += dx;
+                y1 += sy;
+            }
+        }
+        glEnd();
+    }
+
+    // Integer-based 8-Way Symmetric Bresenham Circle Drawing
+    static void drawCircle(int xc, int yc, int radius, float r, float g, float b) {
+        int x = 0;
+        int y = radius;
+        int d = 3 - 2 * radius; // Initial decision parameter
+
+        glColor3f(r, g, b);
+        glBegin(GL_POINTS);
+        while (y &gt;= x) {
+            // Plot all 8 octants
+            glVertex2i(xc + x, yc + y);
+            glVertex2i(xc - x, yc + y);
+            glVertex2i(xc + x, yc - y);
+            glVertex2i(xc - x, yc - y);
+            glVertex2i(xc + y, yc + x);
+            glVertex2i(xc - y, yc + x);
+            glVertex2i(xc + y, yc - x);
+            glVertex2i(xc - y, yc - x);
+
+            if (d &gt; 0) {
+                y--;
+                d = d + 4 * (x - y) + 10;
+            } else {
+                d = d + 4 * x + 6;
+            }
+            x++;
+        }
+        glEnd();
+    }
+};
+
+#endif // CO3_PRAC02_BRESENHAM_LINE_CIRCLE_VFX_HPP
+</code></pre>
+        </details>
+      </div>
+
+      <!-- PRACTICAL 03 (TASK 4 / CO3, CO4): SCAN-LINE POLYGON FILLING -->
+      <div class="cg-prac-card" id="cg-prac-scanline" data-task="4">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 4: RENDERING THE APPLICATION</span>
+              <span class="badge badge-win">CO3 &amp; CO4: POLYGON RASTERIZATION [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 03</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">Scan-Line Polygon Filling Algorithm &amp; Health Bars</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Horizontal scanline sweep, edge-table intersection calculation, ascending sort, and parity-rule pixel span filling.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">Edge Intersection &amp; Parity Checking:</strong><br>
+          For each horizontal scanline <code>y</code> from <code>minY</code> to <code>maxY</code>:<br>
+          1. Find edges intersecting <code>y</code> where <code>(y1 &le; y &lt; y2) || (y2 &le; y &lt; y1)</code>.<br>
+          2. Calculate intersection X coordinate: <code>x = x1 + (y - y1) / (y2 - y1) * (x2 - x1)</code>.<br>
+          3. Sort intersection points in ascending order: <code>[x0, x1, x2, x3, ...]</code>.<br>
+          4. Fill horizontal pixel spans between pairs: <code>[x0 .. x1], [x2 .. x3]</code> (Parity rule).<br>
+          &bull; <strong>In-Game Application:</strong> Renders live player health bars in <code>CO3_Prac03_ScanLine_Polygon_HealthBar.hpp</code> and <code>GameMatch.cpp</code>!
+        </div>
+
+        <div class="cg-controls-bar">
+          <span style="font-size: 0.85rem; color: #94a3b8; font-weight: bold;">Shape:</span>
+          <button class="btn btn-secondary btn-sm" onclick="setScanlineShape('healthbar')">Fighter Health Bar</button>
+          <button class="btn btn-secondary btn-sm" onclick="setScanlineShape('hexagon')">Combat Hexagon Shield</button>
+          <button class="btn btn-secondary btn-sm" onclick="setScanlineShape('diamond')">Diamond Crest</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleScanlineAutoSweep()">Toggle Auto-Sweep Line</button>
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+            <span style="font-size: 0.8rem; color: #94a3b8;">Simulate Fighter HP:</span>
+            <input type="range" min="5" max="100" value="85" style="width: 120px;" oninput="updateScanlineHP(this.value)">
+          </div>
+        </div>
+
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasScanline" class="cg-canvas" width="860" height="420"></canvas>
+        </div>
+
+        <div class="cg-telemetry-box" id="cgScanlineLog">
+          Casting horizontal scanlines from minY to maxY...
+        </div>
+
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO3_Prac03_ScanLine_Polygon_HealthBar.hpp</code></span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-scanline')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-scanline"><code>#ifndef CO3_PRAC03_SCANLINE_POLYGON_HEALTHBAR_HPP
+#define CO3_PRAC03_SCANLINE_POLYGON_HEALTHBAR_HPP
+
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;GL/gl.h&gt;
+
+/*
+ * Subject: Computer Graphics
+ * Course Outcome: CO3 | Practical 03
+ * Topic: Scan-Line Polygon Filling Algorithm with Parity Checking
+ * In-Game Application: Rendering dynamic player health bar gauges line by line
+ * with edge-intersection sorting and span filling!
+ */
+class ScanLinePolygonFill {
+public:
+    static void fillPolygon(const std::vector&lt;std::pair&lt;int, int&gt;&gt;&amp; vertices, float r, float g, float b) {
+        if (vertices.size() &lt; 3) return;
+
+        int minY = vertices[0].second;
+        int maxY = vertices[0].second;
+        for (const auto&amp; v : vertices) {
+            if (v.second &lt; minY) minY = v.second;
+            if (v.second &gt; maxY) maxY = v.second;
+        }
+
+        glColor3f(r, g, b);
+        glBegin(GL_LINES);
+
+        // Cast scanline from minY to maxY
+        for (int y = minY; y &lt;= maxY; y++) {
+            std::vector&lt;int&gt; intersections;
+            size_t n = vertices.size();
+
+            for (size_t i = 0; i &lt; n; i++) {
+                size_t j = (i + 1) % n;
+                int y1 = vertices[i].second;
+                int y2 = vertices[j].second;
+                int x1 = vertices[i].first;
+                int x2 = vertices[j].first;
+
+                if ((y1 &lt;= y &amp;&amp; y2 &gt; y) || (y2 &lt;= y &amp;&amp; y1 &gt; y)) {
+                    // Compute intersection point X
+                    float x = x1 + (float)(y - y1) / (float)(y2 - y1) * (x2 - x1);
+                    intersections.push_back((int)x);
+                }
+            }
+
+            // Sort intersection points
+            std::sort(intersections.begin(), intersections.end());
+
+            // Fill pixel spans between pairs of intersections (Parity checking)
+            for (size_t k = 0; k + 1 &lt; intersections.size(); k += 2) {
+                glVertex2i(intersections[k], y);
+                glVertex2i(intersections[k + 1], y);
+            }
+        }
+
+        glEnd();
+    }
+};
+
+#endif // CO3_PRAC03_SCANLINE_POLYGON_HEALTHBAR_HPP
+</code></pre>
+        </details>
+      </div>
+
+      <!-- PRACTICAL 04 (TASK 2 / CO2): 3D TRANSFORMATION MATRICES -->
+      <div class="cg-prac-card" id="cg-prac-transforms" data-task="2">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 2: TRANSFORMATIONS & CLIPPING</span>
+              <span class="badge badge-win">CO2: GEOMETRIC TRANSFORMATIONS [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 04</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">Transformation Matrices &amp; 3D Manipulating Cube</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              OpenGL matrix stack operations (<code>glPushMatrix</code>, <code>glRotatef</code>, <code>glTranslatef</code>, <code>glScalef</code>), 3D multi-color spinning cube, and rotating ninja weapon projectiles.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">Matrix Stack &amp; Composite 3D Transformations:</strong><br>
+          Composite matrix multiplication: <code>[M] = [T(tx, ty, tz)] * [Rx(&theta;x)] * [Ry(&theta;y)] * [Rz(&theta;z)] * [S(sx, sy, sz)]</code>.<br>
+          &bull; <strong>6-Colored Cube Faces:</strong> Front (Red), Back (Green), Top (Blue), Bottom (Yellow), Right (Magenta), Left (Cyan).<br>
+          &bull; <strong>In-Game Application:</strong> Continuous 3D spinning color cube on the combat stage floor and rotating ninja shuriken weapon projectiles.
+        </div>
+
+        <div class="cg-controls-bar">
+          <span style="font-size: 0.85rem; color: #94a3b8; font-weight: bold;">Mode:</span>
+          <button class="btn btn-secondary btn-sm" onclick="set3DObjectType('cube')">3D Color Cube</button>
+          <button class="btn btn-secondary btn-sm" onclick="set3DObjectType('shuriken')">Rotating Ninja Shuriken</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggle3DAutoSpin()">Toggle Auto-Spin</button>
+        </div>
+
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasTransform3D" class="cg-canvas" width="860" height="440"></canvas>
+        </div>
+
+        <div class="cg-telemetry-box" id="cgTransformLog">
+          Computing 3D Euler rotation angles and projection matrix...
+        </div>
+
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO2_Prac04_Transformation_Matrices_3DCube.hpp</code></span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-transforms')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-transforms"><code>#ifndef CO2_PRAC04_TRANSFORMATION_MATRICES_3DCUBE_HPP
+#define CO2_PRAC04_TRANSFORMATION_MATRICES_3DCUBE_HPP
+
+#include &lt;GL/gl.h&gt;
+
+/*
+ * Subject: Computer Graphics
+ * Course Outcome: CO2 | Practical 04
+ * Topic: OpenGL Transformation Matrices (glPushMatrix, glRotatef, glTranslatef, glScalef)
+ * In-Game Application: Continuous 3D spinning color cube on the arena stage floor
+ * and dynamic rotating ninja shuriken weapon projectiles!
+ */
+class TransformationMatrix3DCube {
+public:
+    static void drawSpinningCube(float centerX, float centerY, float size, float angle) {
+        glPushMatrix();
+        glTranslatef(centerX, centerY, 0.0f);
+        glRotatef(angle, 1.0f, 1.0f, 0.5f);
+        glScalef(size, size, size);
+
+        glBegin(GL_QUADS);
+        // Front Face (Red)
+        glColor3f(0.9f, 0.2f, 0.2f);
+        glVertex3f(-0.5f, -0.5f,  0.5f);
+        glVertex3f( 0.5f, -0.5f,  0.5f);
+        glVertex3f( 0.5f,  0.5f,  0.5f);
+        glVertex3f(-0.5f,  0.5f,  0.5f);
+
+        // Back Face (Green)
+        glColor3f(0.2f, 0.9f, 0.3f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(-0.5f,  0.5f, -0.5f);
+        glVertex3f( 0.5f,  0.5f, -0.5f);
+        glVertex3f( 0.5f, -0.5f, -0.5f);
+
+        // Top Face (Blue)
+        glColor3f(0.2f, 0.4f, 0.95f);
+        glVertex3f(-0.5f,  0.5f, -0.5f);
+        glVertex3f(-0.5f,  0.5f,  0.5f);
+        glVertex3f( 0.5f,  0.5f,  0.5f);
+        glVertex3f( 0.5f,  0.5f, -0.5f);
+
+        // Bottom Face (Yellow)
+        glColor3f(0.95f, 0.9f, 0.2f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f( 0.5f, -0.5f, -0.5f);
+        glVertex3f( 0.5f, -0.5f,  0.5f);
+        glVertex3f(-0.5f, -0.5f,  0.5f);
+
+        // Right Face (Magenta)
+        glColor3f(0.9f, 0.2f, 0.9f);
+        glVertex3f( 0.5f, -0.5f, -0.5f);
+        glVertex3f( 0.5f,  0.5f, -0.5f);
+        glVertex3f( 0.5f,  0.5f,  0.5f);
+        glVertex3f( 0.5f, -0.5f,  0.5f);
+
+        // Left Face (Cyan)
+        glColor3f(0.2f, 0.9f, 0.9f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(-0.5f, -0.5f,  0.5f);
+        glVertex3f(-0.5f,  0.5f,  0.5f);
+        glVertex3f(-0.5f,  0.5f, -0.5f);
+        glEnd();
+
+        glPopMatrix();
+    }
+};
+
+#endif // CO2_PRAC04_TRANSFORMATION_MATRICES_3DCUBE_HPP
+</code></pre>
+        </details>
+      </div>
+
+      <!-- PRACTICAL 06 (TASK 3 / CO6): TEXTURES & PHONG LIGHTING -->
+      <div class="cg-prac-card" id="cg-prac-lighting" data-task="3">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 3: TEXTURES & LIGHTING EFFECTS</span>
+              <span class="badge badge-win">CO6: TEXTURE, LIGHTING & COLOR EFFECTS [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 06</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">Texture Mapping, Illumination Models &amp; Material Effects</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Procedural RGBA 32-bit texture synthesis, fixed-function Phong/Gouraud lighting pipeline, specular sheen, and fighter material archetypes.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">Illumination Pipeline (Phong Model):</strong><br>
+          Total Illumination equation: <code>I = I_ambient * K_ambient + I_diffuse * K_diffuse * max(0, N . L) + I_specular * K_specular * (max(0, N . H))^s</code>.<br>
+          &bull; <strong>Light Sources:</strong> Key Overhead Spotlight (<code>GL_LIGHT0</code>) + Dynamic Combat Point Light (<code>GL_LIGHT1</code>).<br>
+          &bull; <strong>Fighter Materials:</strong> Cyber Brawler (chrome shininess = 96), Shadow Ninja (stealth matte = 24), Blaze Warrior (metallic sheen = 64), Aura Paladin (holy gold mirror = 128).
+        </div>
+
+        <div class="cg-controls-bar">
+          <span style="font-size: 0.85rem; color: #94a3b8; font-weight: bold;">Lighting:</span>
+          <button class="btn btn-secondary btn-sm" onclick="setLightingMode('dynamic')">Full Dynamic [LIGHT0+1]</button>
+          <button class="btn btn-secondary btn-sm" onclick="setLightingMode('key')">Key Spotlight Only</button>
+          <button class="btn btn-secondary btn-sm" onclick="setLightingMode('unlit')">Flat Unlit</button>
+          <span style="font-size: 0.85rem; color: #94a3b8; font-weight: bold; margin-left: 8px;">Materials:</span>
+          <button class="btn btn-secondary btn-sm" onclick="setMaterialPreset('cyber')">Cyber Brawler</button>
+          <button class="btn btn-secondary btn-sm" onclick="setMaterialPreset('ninja')">Shadow Ninja</button>
+          <button class="btn btn-secondary btn-sm" onclick="setMaterialPreset('blaze')">Blaze Warrior</button>
+          <button class="btn btn-secondary btn-sm" onclick="setMaterialPreset('paladin')">Aura Paladin</button>
+        </div>
+
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasLighting" class="cg-canvas" width="860" height="420"></canvas>
+        </div>
+
+        <div class="cg-telemetry-box" id="cgLightingLog">
+          Computing Phong illumination model and distance attenuation...
+        </div>
+
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO6_Prac06_Texture_Lighting_Color_Effects.hpp</code> (Extract)</span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-lighting')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-lighting"><code>#ifndef CO6_PRAC06_TEXTURE_LIGHTING_COLOR_EFFECTS_HPP
+#define CO6_PRAC06_TEXTURE_LIGHTING_COLOR_EFFECTS_HPP
+
+#include &lt;windows.h&gt;
+#include &lt;GL/gl.h&gt;
+#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;string&gt;
+#include &lt;iostream&gt;
+#include &lt;algorithm&gt;
+
+/*
+ * ============================================================================
+ * CLASH OF BYTES: COMPUTER GRAPHICS LABORATORY (Course Code: 2310218L)
+ * Practical No. 06 | Course Outcome 6 (CO6):
+ * TEXTURE MAPPING, ILLUMINATION MODELS (LIGHTING) AND DYNAMIC COLOR EFFECTS
+ * ============================================================================
+ *
+ * ACADEMIC &amp; THEORETICAL FOUNDATIONS (CO6):
+ * 1. TEXTURE MAPPING:
+ *    - Parametric texture coordinate space (S, T) mapped to normalized [0, 1] range.
+ *    - Texture Wrapping Modes: GL_REPEAT (periodic tiling for floor and pillars)
+ *      and GL_CLAMP / GL_CLAMP_TO_EDGE (boundary clamping for icons and shields).
+ *    - Texture Filtering: GL_LINEAR for magnification (bilinear interpolation),
+ *      and GL_LINEAR for minification to eliminate aliasing and high-frequency noise.
+ *    - Texture Environment: GL_MODULATE mode, where fragment color is calculated as:
+ *      C_final = C_texture * C_lighting_and_vertex
+ *    - Procedural Texture Synthesis: Pixel data generated algorithmically in memory
+ *      (RGBA 32-bit format) to eliminate missing external asset dependencies.
+ *
+ * 2. ILLUMINATION &amp; LIGHTING PIPELINE (PHONG / GOURAUD ILLUMINATION):
+ *    - Fixed-Function OpenGL hardware lighting equation:
+ *      I = I_ambient * K_ambient + 
+ *          I_diffuse * K_diffuse * max(0, N . L) + 
+ *          I_specular * K_specular * max(0, N . H)^s
+ *      where N = Surface Normal, L = Light Direction Vector, H = Halfway Vector,
+ *      and s = Material Shininess Exponent.
+ *    - Light 0: Arena Overhead Directional / Key Spotlight (cool cyber-arena fill).
+ *    - Light 1: Dynamic Combat Point Light (tracks strikes, hit sparks, and special moves
+ *      with distance attenuation: 1 / (c + l*d + q*d^2)).
+ *    - Two-Sided Lighting (GL_LIGHT_MODEL_TWO_SIDE) and Local Viewer calculation.
+ *    - Surface Normal generation (glNormal3f) for 2D floor surfaces and 3D cube facets.
+ *
+ * 3. COLOR EFFECTS &amp; MATERIAL PROPERTIES:
+ *    - Material Reflection: Specular coefficient, shininess, and self-luminous emission.
+ *    - Fighter Archetype Materials:
+ *      * Blaze Warrior: Metallic gold/crimson specular sheen (shininess = 64) + ember emission.
+ *      * Shadow Ninja: Matte stealth obsidian (shininess = 24) + moonlit cyan rim.
+ *      * Cyber Brawler: Chrome cybernetic polish (shininess = 96) + electric blue circuit emission.
+ *      * Aura Paladin: Brilliant holy gold mirror finish (shininess = 128) + radiant halo emission.
+ *      * Blood Berserker: Blood-rage dynamic emission scaling inversely with remaining HP!
+ *      * Steel Gladiator: Burnished battle-hardened steel (shininess = 48).
+ *    - Dynamic Combat VFX:
+ *      * Hit Flash: Specular surge and white-hot flash on struck fighter.
+ *      * Guard Barrier: Translucent textured hexagonal energy shield during blocking.
+ *      * Rage / Overdrive: Pulsing emissive aura during low health or special moves.
+ * ============================================================================
+ */
+
+namespace CG_CO6 {
+
+    // Procedural Texture Identifiers
+    enum TextureType {
+        TEX_FLOOR_GRID = 0,
+        TEX_CYBER_PILLAR = 1,
+        TEX_ENERGY_PLATFORM = 2,
+        TEX_CIRCUIT_CUBE = 3,
+        TEX_HEX_SHIELD = 4,
+        TEX_RADIAL_SPARK = 5,
+        TEX_COUNT = 6
+    };
+
+    // Lighting Modes for interactive user toggling (HotKey: F6)
+    enum class LightingMode {
+        FULL_DYNAMIC = 0,   // Key Overhead Light + Dynamic Combat Point Light
+        KEY_LIGHT_ONLY = 1, // Key Overhead Fl
+
+// ... [Full 678 lines continued in 1_Computer_Graphics/CO6_Prac06_Texture_Lighting_Color_Effects.hpp] ...</code></pre>
+        </details>
+      </div>
+
+      <!-- PRACTICAL 01 (TASK 1 / CO1): OPENGL PRIMITIVES & GOURAUD SHADING -->
+      <div class="cg-prac-card" id="cg-prac-gouraud" data-task="1">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 1: DEVELOPMENT ARCHITECTURE</span>
+              <span class="badge badge-win">CO1: OPENGL GRAPHICS PRIMITIVES [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">PRACTICAL 01</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">OpenGL Primitives &amp; Gouraud Vertex Color Interpolation</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Double-buffered OpenGL context initialization, orthographic viewport projection, and Gouraud vertex color interpolation across primitive facets.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">Bilinear Vertex Color Interpolation:</strong><br>
+          For a Gouraud-shaded quad, fragment color is calculated across horizontal spans: <code>C(x, y) = (1 - t) * C_left + t * C_right</code>, smoothly blending RGB channels across vertices.<br>
+          &bull; <strong>In-Game Application:</strong> Powers the dynamic Gouraud gradient backgrounds, cyber stage walls, and combat UI elements in <code>CO1_Prac01_OpenGL_Gouraud_Renderer.cpp</code>.
+        </div>
+
+        <details class="code-viewer" open>
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CO1_Prac01_OpenGL_Gouraud_Renderer.cpp</code> (Extract)</span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-gouraud')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-gouraud"><code>/*
+ * Subject: Computer Graphics
+ * Course Outcomes: CO1, CO2, CO3 | Practicals 01 to 04
+ * Topic: OpenGL Primitives, Gouraud Shading, Bresenham VFX, Scan-Line HP Bars &amp; 3D Transformations
+ */
+#include &quot;CO1_Prac01_OpenGL_Gouraud_Renderer.hpp&quot;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+#include &lt;cctype&gt;
+#include &lt;cstdlib&gt;
+
+Renderer::Renderer() 
+    : screenWidth(1280), screenHeight(720), 
+      screenShakeTimer(0.0f), screenShakeIntensity(0.0f), cubeSpinAngle(0.0f),
+      texturesEnabled(true), colorEffectsEnabled(true) {}
+
+Renderer::~Renderer() {}
+
+void Renderer::init(int width, int height) {
+    screenWidth = width;
+    screenHeight = height;
+
+    glViewport(0, 0, screenWidth, screenHeight);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0.0, screenWidth, 0.0, screenHeight, -500.0, 500.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Practical 06 (CO6): Initialize Procedural 32-bit RGBA Textures
+    textureManager.init();
+}
+
+void Renderer::clear(float r, float g, float b) {
+    glClearColor(r, g, b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer::beginFrame() {
+    glLoadIdentity();
+    if (screenShakeTimer &gt; 0.0f) {
+        float shakeX = ((rand() % 100) / 50.0f - 1.0f) * screenShakeIntensity;
+        float shakeY = ((rand() % 100) / 50.0f - 1.0f) * screenShakeIntensity;
+        glTranslatef(shakeX, shakeY, 0.0f);
+    }
+}
+
+void Renderer::endFrame(HDC hdc) {
+    SwapBuffers(hdc);
+}
+
+void Renderer::update(float dt) {
+    if (screenShakeTimer &gt; 0.0f) {
+        screenShakeTimer -= dt;
+        if (screenShakeTimer &lt;= 0.0f) {
+            screenShakeTimer = 0.0f;
+            screenShakeIntensity = 0.0f;
+        }
+    }
+    cubeSpinAngle += 60.0f * dt;
+    if (cubeSpinAngle &gt;= 360.0f) cubeSpinAngle -= 360.0f;
+
+    // Practical 06 (CO6): Update dynamic combat point light decay
+    lightingEngine.update(dt);
+}
+
+void Renderer::triggerScreenShake(float intensity, float duration) {
+    screenShakeIntensity = intensity;
+    screenShakeTimer = duration;
+}
+
+// ----------------------------------------------------------------------------
+// Practical No. 01: Shaded Geometric Primitives (OpenGL Primitives)
+// ----------------------------------------------------------------------------
+void Renderer::drawRect(float x, float y, float w, float h, float r, float g, float b, float a) {
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glColor4f(r, g, b, a);
+    glBegin(GL_QUADS);
+        glVertex2f(x, y);
+        glVertex2f(x + w, y);
+        glVertex2f(x + w, y + h);
+        glVertex2f(x, y + h);
+    glEnd();
+}
+
+void Renderer::drawGradientRect(float x, float y, float w, float h, float r1, float g1, float b1, float r2, float g2, float b2) {
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glBegin(GL_QUADS);
+        glColor3f(r1, g1, b1); glVertex2f(x, y);
+        glColor3f(r1, g1, b1); glVertex2f(x + w, y);
+        glColor3f(r2, g2, b2); glVertex2f(x + w, y + h);
+        glColor3f(r2, g2, b2); glVertex2f(x, y + h);
+    glEnd();
+}
+
+void Renderer::drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float r, float g, float b) {
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glColor3f(r, g, b);
+    glBegin(GL_TRIANGLES);
+        glVertex2f(x1, y1);
+        glVertex2f(x2, y2);
+        glVertex2f(x3, y3);
+    glEnd();
+}
+
+void Renderer::drawRectOutline(float x, float y, float w, float h, float r, float g, float b, float lineWidth) {
+    glColor3f(r, g, b);
+    glLineWidth(lineWidth);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(x, y);
+        glVertex2f(x + w, y);
+        glVertex2f(x + w, y + h);
+        glVertex2f(x, y + h);
+    glEnd();
+}
+
+// ----------------------------------------------------------------------------
+// Pr
+
+// ... [Full 859 lines continued in 1_Computer_Graphics/CO1_Prac01_OpenGL_Gouraud_Renderer.cpp] ...</code></pre>
+        </details>
+      </div>
+
+      <!-- TASK 4 ARCHITECTURE: AABB COLLISION GEOMETRY (CO4 / TASK 4) -->
+      <div class="cg-prac-card" id="cg-prac-collision" data-task="4">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+              <span class="badge" style="background: rgba(0,229,255,0.15); color: var(--neon-cyan);">TASK 4: RENDERING THE APPLICATION</span>
+              <span class="badge badge-win">CO4: PROJECTION &amp; VIEWING TRANSFORMATIONS [L3]</span>
+              <span class="badge" style="background:#1e293b; color:#fff;">TASK 4 ARCHITECTURE</span>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 4px;">AABB Hitbox &amp; Hurtbox Collision Detection Geometry</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              Orthographic coordinate alignment, Axis-Aligned Bounding Box (AABB) overlap testing, and combat hitspark collision resolution.
+            </p>
+          </div>
+        </div>
+
+        <div class="cg-math-box">
+          <strong style="color: var(--neon-cyan);">AABB Overlap Condition:</strong><br>
+          Two boxes <code>Box1[x1, y1, w1, h1]</code> and <code>Box2[x2, y2, w2, h2]</code> intersect if and only if:<br>
+          <code>(x1 &lt; x2 + w2) &amp;&amp; (x1 + w1 &gt; x2) &amp;&amp; (y1 &lt; y2 + h2) &amp;&amp; (y1 + h1 &gt; y2)</code>.<br>
+          &bull; <strong>In-Game Application:</strong> Toggleable via <code>[F1]</code> in the C++ engine to visualize real-time fighter hurtboxes and strike hitboxes in <code>CollisionSystem.hpp</code>.
+        </div>
+
+        <div class="cg-controls-bar">
+          <span style="font-size: 0.85rem; color: var(--neon-cyan); font-weight: bold;">Interactive Collision Demonstration:</span>
+          <span style="font-size: 0.8rem; color: #94a3b8;">Click and drag either Player 1 (Blue Hurtbox) or Player 2 (Red Attack Hitbox) to test live collision detection!</span>
+        </div>
+
+        <div class="cg-canvas-container">
+          <canvas id="cgCanvasCollision" class="cg-canvas" width="860" height="380"></canvas>
+        </div>
+
+        <div class="cg-telemetry-box" id="cgCollisionLog">
+          Testing AABB bounding box intersection...
+        </div>
+
+        <details class="code-viewer">
+          <summary>
+            <span>Original C++ OpenGL Source Code: <code>CollisionSystem.hpp</code></span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCppSource(this, 'code-cg-collision')">Copy Code</button>
+          </summary>
+          <pre class="code-content" id="code-cg-collision"><code>#ifndef COLLISIONSYSTEM_HPP
+#define COLLISIONSYSTEM_HPP
+
+/*
+ * Subject: Programming Laboratory &amp; Computer Organization
+ * Topic: AABB Real-Time Collision Resolution &amp; Hardware Assembly Damage Hook
+ */
+#include &quot;Fighter.hpp&quot;
+#include &quot;ParticleSystem.hpp&quot;
+#include &quot;CO1_Prac01_OpenGL_Gouraud_Renderer.hpp&quot;
+#include &quot;../3_Computer_Organization_Architecture/CO2_Prac03_x86_64_Assembly_Damage_Engine.hpp&quot;
+#include &lt;string&gt;
+
+class CollisionSystem {
+private:
+    std::string latestALUTrace;
+
+    static bool checkAABB(const Hitbox&amp; a, const Hitbox&amp; b) {
+        return (a.offsetX &lt; b.offsetX + b.width &amp;&amp;
+                a.offsetX + a.width &gt; b.offsetX &amp;&amp;
+                a.offsetY &lt; b.offsetY + b.height &amp;&amp;
+                a.offsetY + a.height &gt; b.offsetY);
+    }
+
+public:
+    CollisionSystem() : latestALUTrace(&quot;WAITING FOR COMBAT HIT...&quot;) {}
+
+    void checkCombat(Fighter* p1, Fighter* p2, ParticleSystem&amp; particles, Renderer&amp; renderer) {
+        if (!p1 || !p2) return;
+        if (!p1-&gt;isAlive() || !p2-&gt;isAlive()) return;
+
+        // 1. Player Body Pushback
+        float dist = p2-&gt;getPosition().x - p1-&gt;getPosition().x;
+        float minDist = 70.0f;
+        if (std::abs(dist) &lt; minDist) {
+            float pushDir = (dist &gt;= 0.0f) ? 1.0f : -1.0f;
+            // Push apart
+            p1-&gt;takeHit(0, -pushDir * 0.2f, false);
+            p2-&gt;takeHit(0, pushDir * 0.2f, false);
+        }
+
+        // Keep fighters facing each other
+        if (p1-&gt;getPosition().x &lt; p2-&gt;getPosition().x) {
+            p1-&gt;setFacingRight(true);
+            p2-&gt;setFacingRight(false);
+        } else {
+            p1-&gt;setFacingRight(false);
+            p2-&gt;setFacingRight(true);
+        }
+
+        // 2. Check P1 attacking P2
+        Hitbox p1Hit = p1-&gt;getActiveHitboxWorld();
+        Hitbox p2Hurt = p2-&gt;getHurtboxWorld();
+        if (p1Hit.active &amp;&amp; checkAABB(p1Hit, p2Hurt)) {
+            // Practical No. 03: REAL 64-BIT ASSEMBLY DAMAGE CALCULATION!
+            CombatALUResult alu = AssemblyDamageEngine::calculateHitDamage(p1-&gt;getAttackDamage(), 5, 1);
+            latestALUTrace = &quot;P1 HIT! &quot; + alu.assemblyTrace;
+
+            float knockDir = p1-&gt;isFacingRightDir() ? 1.0f : -1.0f;
+            p2-&gt;takeHit((int)alu.finalDamage, knockDir, p1-&gt;getState() == FighterState::SPECIAL_ATTACK);
+            p1-&gt;clearActiveHitbox();
+
+            // Practical No. 02: Bresenham spark emission
+            Vector2D sparkPos(p2-&gt;getPosition().x, p1Hit.offsetY + p1Hit.height * 0.5f);
+            particles.emitHitSparks(sparkPos, alu.finalDamage &gt; 20);
+            renderer.triggerScreenShake(alu.finalDamage &gt; 20 ? 7.0f : 4.0f, 0.2f);
+
+            // Practical 06 (CO6): Dynamic Combat Point Light flare
+            float lR = 1.0f, lG = 0.85f, lB = 0.2f;
+            if (p1-&gt;getName().find(&quot;WARRIOR&quot;) != std::string::npos) { lR = 1.0f; lG = 0.45f; lB = 0.1f; }
+            else if (p1-&gt;getName().find(&quot;NINJA&quot;) != std::string::npos) { lR = 0.2f; lG = 0.85f; lB = 1.0f; }
+            else if (p1-&gt;getName().find(&quot;BRAWLER&quot;) != std::string::npos) { lR = 0.1f; lG = 0.95f; lB = 1.0f; }
+            else if (p1-&gt;getName().find(&quot;PALADIN&quot;) != std::string::npos) { lR = 1.0f; lG = 0.95f; lB = 0.35f; }
+            else if (p1-&gt;getName().find(&quot;BERSERKER&quot;) != std::string::npos) { lR = 1.0f; lG = 0.15f; lB = 0.1f; }
+            else if (p1-&gt;getName().find(&quot;GLADIATOR&quot;) != std::string::npos) { lR = 1.0f; lG = 0.7f; lB = 0.25f; }
+            renderer.setCombatLight(sparkPos.x, sparkPos.y, lR, lG, lB, alu.finalDamage &gt; 20 ? 1.5f : 1.0f);
+        }
+
+        // 3. Check P2 attacking P1
+        Hitbox p2Hit = p2-&gt;getActiveHitboxWorld();
+        Hitbox p1Hurt = p1-&gt;getHurtboxWorld();
+        if (p2Hit.active &amp;&amp; checkAABB(p2Hit, p1Hurt)) {
+            // Practical No. 03: REAL 64-BIT ASSEMBLY DAMAGE CALCULATION!
+            CombatALUResult alu = AssemblyDamageEngine::calculateHitDamage(p2-&gt;getAttackDamage(), 5, 1);
+            latestALUTrace = &quot;P2 HIT! &quot; + alu.assemblyTrace;
+
+            float knockDir = p2-&gt;isFacingRightDir() ? 1.0f : -1.0f;
+            p1-&gt;takeHit((int)alu.finalDamage, knockDir, p2-&gt;getState() == FighterState::SPECIAL_ATTACK);
+            p2-&gt;clearActiveHitbox();
+
+            // Practical No. 02: Bresenham spark emission
+            Vector2D sparkPos(p1-&gt;getPosition().x, p2Hit.offsetY + p2Hit.height * 0.5f);
+            particles.emitHitSparks(sparkPos, alu.finalDamage &gt; 20);
+            renderer.triggerScreenShake(alu.finalDamage &gt; 20 ? 7.0f : 4.0f, 0.2f);
+
+            // Practical 06 (CO6): Dynamic Combat Point Light flare
+            float lR = 1.0f, lG = 0.85f, lB = 0.2f;
+            if (p2-&gt;getName().find(&quot;WARRIOR&quot;) != std::string::npos) { lR = 1.0f; lG = 0.45f; lB = 0.1f; }
+            else if (p2-&gt;getName().find(&quot;NINJA&quot;) != std::string::npos) { lR = 0.2f; lG = 0.85f; lB = 1.0f; }
+            else if (p2-&gt;getName().find(&quot;BRAWLER&quot;) != std::string::npos) { lR = 0.1f; lG = 0.95f; lB = 1.0f; }
+            else if (p2-&gt;getName().find(&quot;PALADIN&quot;) != std::string::npos) { lR = 1.0f; lG = 0.95f; lB = 0.35f; }
+            else if (p2-&gt;getName().find(&quot;BERSERKER&quot;) != std::string::npos) { lR = 1.0f; lG = 0.15f; lB = 0.1f; }
+            else if (p2-&gt;getName().find(&quot;GLADIATOR&quot;) != std::string::npos) { lR = 1.0f; lG = 0.7f; lB = 0.25f; }
+            renderer.setCombatLight(sparkPos.x, sparkPos.y, lR, lG, lB, alu.finalDamage &gt; 20 ? 1.5f : 1.0f);
+        }
+    }
+
+    std::string getLatestALUTrace() const { return latestALUTrace; }
+};
+
+#endif // COLLISIONSYSTEM_HPP
+</code></pre>
+        </details>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- VIEW 2: AUTHENTICATION (DUAL & SINGLE) -->
+  <section class="view-section" id="view-auth">
+    <div class="container" style="max-width: 960px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h2>Player <span style="color: var(--neon-cyan);">Authentication</span></h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">
+          Two-player independent authentication for local match play, backed by Supabase Auth
+        </p>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          <span class="badge" id="authModeBadge" style="font-size: 0.85rem; padding: 6px 16px; background: rgba(0,229,255,0.12); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); letter-spacing: 1px;">
+            INITIALIZING AUTHENTICATION ENGINE...
+          </span>
+          <div id="authDetailsBox" style="font-size: 0.8rem; color: #64748b; background: rgba(15,23,42,0.6); border: 1px solid #1e293b; padding: 4px 14px; border-radius: 20px;">
+            Connecting to Supabase...
+          </div>
+        </div>
+      </div>
+
+      <!-- Dual Player Login Grid (Matching Swing TwoPlayerLoginFrame) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; margin-bottom: 40px;">
+        <!-- Player 1 Login Panel -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="color: var(--neon-cyan);">Player 1 (Left)</h3>
+            <span class="badge badge-loss" id="p1AuthBadge">NOT SIGNED IN</span>
+          </div>
+          <div id="p1ErrorBox" style="display:none; padding: 10px; background: rgba(255,42,109,0.15); border: 1px solid var(--neon-pink); color: var(--neon-pink); border-radius: 4px; font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4;"></div>
+          <form id="p1LoginForm" onsubmit="handleP1Login(event)">
+            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; margin-bottom: 14px;" onclick="playAsGuest(1)">⚡ Play P1 as Guest (Offline Mode)</button>
+            <div class="form-group">
+              <label class="form-label" style="display: flex; justify-content: space-between;">
+                <span>Registered Supabase Email</span>
+                <span style="color: var(--neon-cyan); font-size: 0.75rem;">(Email with @ required)</span>
+              </label>
+              <input type="email" class="form-input" id="p1Username" placeholder="e.g. player1@gmail.com" required autocomplete="email">
+              <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Enter the email address you registered with on Supabase.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-input" id="p1Password" placeholder="Enter password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In Player 1</button>
+          </form>
+          <div id="p1LoggedBox" style="display:none; text-align: center; padding: 16px 0;">
+            <h4 style="color:#fff;" id="p1LoggedName">Player 1</h4>
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;" id="p1LoggedEmail">player1@example.com</div>
+            <button class="btn btn-secondary btn-sm" onclick="logoutP1()">Sign Out Player 1</button>
+          </div>
+        </div>
+
+        <!-- Player 2 Login Panel -->
+        <div class="card card-pink">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="color: var(--neon-pink);">Player 2 (Right)</h3>
+            <span class="badge badge-loss" id="p2AuthBadge">NOT SIGNED IN</span>
+          </div>
+          <div id="p2ErrorBox" style="display:none; padding: 10px; background: rgba(255,42,109,0.15); border: 1px solid var(--neon-pink); color: var(--neon-pink); border-radius: 4px; font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4;"></div>
+          <form id="p2LoginForm" onsubmit="handleP2Login(event)">
+            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; margin-bottom: 14px;" onclick="playAsGuest(2)">⚡ Play P2 as Guest (Offline Mode)</button>
+            <div class="form-group">
+              <label class="form-label" style="display: flex; justify-content: space-between;">
+                <span>Registered Supabase Email</span>
+                <span style="color: var(--neon-pink); font-size: 0.75rem;">(Must differ from P1)</span>
+              </label>
+              <input type="email" class="form-input" id="p2Username" placeholder="e.g. player2@gmail.com" required autocomplete="email">
+              <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Must be a different Supabase account than Player 1.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-input" id="p2Password" placeholder="Enter password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Sign In Player 2</button>
+          </form>
+          <div id="p2LoggedBox" style="display:none; text-align: center; padding: 16px 0;">
+            <h4 style="color:#fff;" id="p2LoggedName">Player 2</h4>
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;" id="p2LoggedEmail">player2@example.com</div>
+            <button class="btn btn-secondary btn-sm" onclick="logoutP2()">Sign Out Player 2</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registration Form -->
+      <div class="card" style="max-width: 540px; margin: 0 auto;">
+        <h3 style="color: var(--neon-cyan); margin-bottom: 8px; text-align: center;">Register New Fighter Account</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 14px;">
+          Direct registration in Supabase Auth &bull; Auto-provisions public.users profile
+        </p>
+        <div style="padding: 10px 14px; background: rgba(0,229,255,0.06); border-left: 3px solid var(--neon-cyan); font-size: 0.8rem; margin-bottom: 16px; color: #cbd5e1; line-height: 1.45;">
+          <strong>Important Email Verification Notice:</strong><br>
+          Supabase requires a real email address (e.g. <code>@gmail.com</code>, <code>@yahoo.com</code>, <code>@outlook.com</code>).
+          After registering, you must check your email inbox and click the <strong>Supabase confirmation link</strong> before logging in.
+        </div>
+        <div id="regErrorBox" style="display:none; padding: 10px; background: rgba(255,42,109,0.15); border: 1px solid var(--neon-pink); color: var(--neon-pink); border-radius: 4px; font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4;"></div>
+        <div id="regSuccessBox" style="display:none; padding: 10px; background: rgba(0,255,136,0.15); border: 1px solid var(--neon-green); color: var(--neon-green); border-radius: 4px; font-size: 0.85rem; margin-bottom: 12px; line-height: 1.45;"></div>
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input" id="regUsername" placeholder="e.g. cyber_ninja" required minlength="3">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="regEmail" placeholder="e.g. ninja@clashofbytes.io" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="regPassword" placeholder="Minimum 6 characters" required minlength="6" oninput="checkPassStrength(this.value)">
+            <div id="passStrengthMeter" style="height: 4px; background: #1e293b; border-radius: 2px; margin-top: 6px; overflow: hidden;">
+              <div id="passStrengthFill" style="height: 100%; width: 0%; background: #ff2a6d; transition: all 0.2s;"></div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 3: CHARACTER SELECTION -->
+  <section class="view-section" id="view-select">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2>Fighter <span style="color: var(--neon-cyan);">Roster</span></h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Select your warrior for Player 1 and Player 2</p>
+
+        <!-- Dynamic Versus Matchup Bar -->
+        <div class="card" style="margin-top: 20px; display: flex; justify-content: space-around; align-items: center; padding: 18px 24px;">
+          <div style="text-align: center; min-width: 180px;">
+            <span class="badge" style="background: rgba(0,229,255,0.2); color: var(--neon-cyan); margin-bottom: 4px;" id="matchupP1Badge">P1: Player 1</span>
+            <div style="font-size: 1.3rem; font-weight: bold; color: #fff;" id="matchupP1Name">Cyber Brawler</div>
+            <div style="color: var(--neon-cyan); font-size: 0.8rem;" id="matchupP1Arch">CyberBrawler</div>
+          </div>
+          <div style="font-size: 2.4rem; font-weight: 900; color: var(--neon-gold); text-shadow: 0 0 15px rgba(255,204,0,0.7);">
+            VS
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <span class="badge" style="background: rgba(255,42,109,0.2); color: var(--neon-pink); margin-bottom: 4px;" id="matchupP2Badge">P2: Player 2</span>
+            <div style="font-size: 1.3rem; font-weight: bold; color: #fff;" id="matchupP2Name">Shadow Ninja</div>
+            <div style="color: var(--neon-pink); font-size: 0.8rem;" id="matchupP2Arch">NinjaFighter</div>
+          </div>
+          <div>
+            <button class="btn btn-primary btn-lg" onclick="startBattleWithSelections()">Start Battle &rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 Character Cards Grid -->
+      <div id="rosterCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 4: BATTLE ARENA -->
+  <section class="view-section" id="view-play">
+    <div class="container" style="display: flex; flex-direction: column; align-items: center;">
+      <div style="text-align: center; margin-bottom: 14px;">
+        <h2>Combat <span style="color: var(--neon-cyan);">Arena</span></h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">60 FPS Deterministic Engine &bull; AABB Collision &bull; Best of 3 Rounds</p>
+      </div>
+
+      <!-- Arena Canvas -->
+      <div style="position: relative;">
+        <div class="canvas-container">
+          <canvas id="gameCanvas" width="960" height="540"></canvas>
+        </div>
+
+        <!-- In-Game Result Modal -->
+        <div id="battleResultModal" style="display: none; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(6,9,19,0.88); backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; border-radius: 8px;">
+          <h2 style="font-size: 2.8rem; color: var(--neon-gold); text-shadow: 0 0 25px rgba(255,204,0,0.8);" id="modalWinnerTitle">VICTORY!</h2>
+          <div style="font-size: 1.4rem; color: #fff; margin: 8px 0;" id="modalWinnerName">Player 1 Wins!</div>
+          <div style="font-size: 1.1rem; color: var(--neon-cyan); margin-bottom: 8px;" id="modalScoreLine">Final Score: 240 - 180</div>
+          <div style="font-size: 0.9rem; color: var(--neon-green); margin-bottom: 20px;" id="modalDbStatus">Match saved to database!</div>
+          <div style="display: flex; gap: 14px;">
+            <button class="btn btn-primary" onclick="restartMatch()">Play Again</button>
+            <button class="btn btn-secondary" onclick="switchView('select')">Change Fighters</button>
+            <button class="btn btn-secondary" onclick="switchView('history')">View Match History</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div style="display: flex; gap: 14px; margin-top: 14px;">
+        <button class="btn btn-primary btn-sm" onclick="restartMatch()">Restart Match</button>
+        <button class="btn btn-secondary btn-sm" id="btnToggleMute" onclick="toggleAudioMute()">Mute Audio</button>
+      </div>
+
+      <!-- Keyboard Guide (Task 3 Standardized Controls) -->
+      <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; width: 100%; max-width: 960px;">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="color: var(--neon-cyan); margin: 0;">Player 1 Controls (Left)</h4>
+            <span class="badge" style="background:#0f172a; color:#00e5ff;">P1 BLUE</span>
+          </div>
+          <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.8;">
+            Movement: <strong>[A]</strong> Move Left &bull; <strong>[D]</strong> Move Right &bull; <strong>[W]</strong> Jump<br>
+            Combat: <strong>[F]</strong> Attack &bull; <strong>[G]</strong> Defence (Block Shield)<br>
+            <span style="color: #64748b; font-size: 0.78rem;">Full simultaneous key support with Player 2</span>
+          </div>
+        </div>
+        <div class="card card-pink">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="color: var(--neon-pink); margin: 0;">Player 2 Controls (Right)</h4>
+            <span class="badge" style="background:#0f172a; color:#ff2a6d;">P2 PINK</span>
+          </div>
+          <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.8;">
+            Movement: <strong>[←]</strong> Move Left &bull; <strong>[→]</strong> Move Right &bull; <strong>[↑]</strong> Jump<br>
+            Combat: <strong>[K]</strong> Attack &bull; <strong>[L]</strong> Defence (Block Shield)<br>
+            <span style="color: #64748b; font-size: 0.78rem;">Full simultaneous key support with Player 1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 5: DASHBOARD -->
+  <section class="view-section" id="view-dashboard">
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+          <h2>Player <span style="color: var(--neon-cyan);">Dashboard</span></h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem;" id="dashSubtitle">Career overview</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary btn-sm" id="btnDashP1" onclick="switchDashboardPlayer(1)">Player 1 Profile</button>
+          <button class="btn btn-secondary btn-sm" id="btnDashP2" onclick="switchDashboardPlayer(2)">Player 2 Profile</button>
+          <button class="btn btn-primary btn-sm" onclick="switchView('play')">Enter Arena &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Metric Cards Grid (8 Core Database Metrics) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px;">
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Matches</div>
+          <div style="font-size: 2rem; font-weight: 900; color: #fff;" id="dashMatches">0</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Victories (Wins)</div>
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-green);" id="dashWins">0</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Defeats (Losses)</div>
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-pink);" id="dashLosses">0</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Draws</div>
+          <div style="font-size: 2rem; font-weight: 900; color: #cbd5e1;" id="dashDraws">0</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Win Rate</div>
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-gold);" id="dashWinRate">0%</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Career Score</div>
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-cyan);" id="dashTotalScore">0</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Rounds Won / Total</div>
+          <div style="font-size: 1.6rem; font-weight: 900; color: #38bdf8;" id="dashRounds">0 / 0</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Favorite Fighter</div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: var(--neon-gold); margin-top: 8px;" id="dashFavChar">Cyber Brawler</div>
+        </div>
+      </div>
+
+      <!-- Character Usage Breakdown -->
+      <div class="card" style="margin-bottom: 24px;">
+        <h3 style="color: var(--neon-cyan); margin-bottom: 14px;">Character Usage & Mastery</h3>
+        <div id="dashCharUsageList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+          <!-- Dynamically populated from characterUsage in /api/players/{id}/stats -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 6: MATCH HISTORY (JTable Web Equivalent) -->
+  <section class="view-section" id="view-history">
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+          <h2>Match <span style="color: var(--neon-cyan);">History</span></h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Complete battle telemetry records from database</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="loadMatchHistory()">Refresh</button>
+      </div>
+
+      <!-- Filter Controls -->
+      <div style="display: flex; gap: 14px; margin-bottom: 18px;">
+        <input type="text" class="form-input" id="historySearch" placeholder="Search by player or character..." style="max-width: 320px;" oninput="filterHistoryTable()">
+      </div>
+
+      <!-- History Table -->
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Date & Time</th>
+              <th>Player 1 (Left)</th>
+              <th>Player 2 (Right)</th>
+              <th>Score</th>
+              <th>Rounds Won</th>
+              <th>Winner</th>
+              <th>Duration</th>
+              <th>Telemetry</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <!-- Dynamically populated from /api/matches -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 7: LEADERBOARD -->
+  <section class="view-section" id="view-leaderboard">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 28px;">
+        <h2>Global <span style="color: var(--neon-gold);">Leaderboard</span></h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Ranked tournament champions</p>
+      </div>
+
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Matches</th>
+              <th>Wins</th>
+              <th>Losses</th>
+              <th>Win Rate</th>
+              <th>Career Score</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardTableBody">
+            <!-- Dynamically populated from /api/leaderboard -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div><strong>CLASH OF BYTES</strong> &copy; 2026–2027. All Rights Reserved.</div>
+      <div style="margin-top: 4px; color: #64748b; font-size: 0.8rem;">
+        MIT Academy of Engineering (MIT AOE), Pune &bull; Semester III Integrated Project
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script type="module">
+    import { initCgLab, drawClippingCanvas } from "./cg_practicals.js";
+    import { ClashGameEngine } from './engine.js';
+    import { sounds } from './audio.js';
+    import { SUPABASE_CONFIG } from './config.js';
+
+    // Global App State
+    let characters = [];
+    let p1Char = { characterId: 4, characterName: 'Cyber Brawler', archetype: 'CyberBrawler' };
+    let p2Char = { characterId: 3, characterName: 'Shadow Ninja', archetype: 'NinjaFighter' };
+    let p1User = null;
+    let p2User = null;
+    let p1Token = null;
+    let p2Token = null;
+    let gameEngine = null;
+
+    // Dual Isolated Supabase Client Instances (persistSession: false prevents cross-player overwrites)
+    let supabaseP1 = null;
+    let supabaseP2 = null;
+    let isSupabaseActive = false;
+
+    // View Navigation
+    window.switchView = function(viewId) {
+      document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      const targetView = document.getElementById('view-' + viewId);
+      const targetNav = document.getElementById('nav-' + viewId);
+      if (targetView) targetView.classList.add('active');
+      if (targetNav) targetNav.classList.add('active');
+
+      if (viewId === 'play') {
+        initGameEngine();
+      } else if (gameEngine && viewId !== 'play') {
+        gameEngine.stop();
+      }
+
+      if (viewId === 'history') loadMatchHistory();
+      if (viewId === 'leaderboard') loadLeaderboard();
+      if (viewId === 'dashboard') loadDashboard();
+      if (viewId === 'cg') {
+        initCgLab();
+      }
+    };
+
+    // Load Characters from REST API
+    async function loadCharacters() {
+      try {
+        const res = await fetch('/api/characters');
+        characters = await res.json();
+      } catch (e) {
+        console.warn('API /api/characters offline; using default roster.');
+        characters = [
+          { characterId: 1, characterName: 'Ironclad Warrior', archetype: 'WarriorFighter', baseHp: 115, baseAttack: 18, baseDefense: 6, speed: 5, characterDescription: 'Armored heavy vanguard equipped with crushing greatsword slashes and Titan Guard.' },
+          { characterId: 2, characterName: 'Blaze Berserker', archetype: 'BerserkerWarrior', baseHp: 130, baseAttack: 22, baseDefense: 4, speed: 6.5, characterDescription: 'Reckless brawler trading armor defense for devastating fury damage multipliers.' },
+          { characterId: 3, characterName: 'Shadow Ninja', archetype: 'NinjaFighter', baseHp: 95, baseAttack: 16, baseDefense: 4, speed: 9, characterDescription: 'Stealth assassin utilizing blinding agility, evasion frames, and shuriken strikes.' },
+          { characterId: 4, characterName: 'Cyber Brawler', archetype: 'CyberBrawler', baseHp: 110, baseAttack: 19, baseDefense: 3, speed: 7, characterDescription: 'High-tech martial artist featuring rapid nanotech combo rushes and cyber barriers.' },
+          { characterId: 5, characterName: 'Aura Paladin', archetype: 'PaladinFighter', baseHp: 120, baseAttack: 17, baseDefense: 7.5, speed: 4.5, characterDescription: 'Radiant holy champion channeling blessed aegis barriers and holy radiance strikes.' },
+          { characterId: 6, characterName: 'Titan Gladiator', archetype: 'HybridGladiator', baseHp: 140, baseAttack: 24, baseDefense: 8, speed: 4, characterDescription: 'Colosseum champion master combining raw berserker fury with elemental magma strikes.' }
+        ];
+      }
+      renderFighterCards();
+    }
+
+    function renderFighterCards() {
+      const homeBox = document.getElementById('homeFighterCards');
+      const rosterBox = document.getElementById('rosterCardsGrid');
+      if (homeBox) homeBox.innerHTML = '';
+      if (rosterBox) rosterBox.innerHTML = '';
+
+      characters.forEach((char, idx) => {
+        // Home slice of 3
+        if (homeBox && idx < 3) {
+          homeBox.innerHTML += `
+            <div class="card">
+              <h3 style="color: var(--neon-cyan); margin-bottom: 4px;">${char.characterName}</h3>
+              <div style="color: var(--neon-gold); font-size: 0.8rem; margin-bottom: 10px;">${char.archetype}</div>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;">${char.characterDescription}</p>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #fff;">
+                <span>HP: <strong>${char.baseHp}</strong></span>
+                <span>ATK: <strong>${char.baseAttack}</strong></span>
+                <span>DEF: <strong>${char.baseDefense}</strong></span>
+                <span>SPD: <strong>${char.speed}</strong></span>
+              </div>
+            </div>`;
+        }
+
+        // Full Roster Grid
+        if (rosterBox) {
+          const isP1 = p1Char?.characterId === char.characterId;
+          const isP2 = p2Char?.characterId === char.characterId;
+          rosterBox.innerHTML += `
+            <div class="card ${isP2 ? 'card-pink' : ''}" style="${isP1 ? 'border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0,229,255,0.4);' : isP2 ? 'border-color: var(--neon-pink); box-shadow: 0 0 15px rgba(255,42,109,0.4);' : ''}">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <h3 style="color: ${isP1 ? 'var(--neon-cyan)' : isP2 ? 'var(--neon-pink)' : '#fff'};">${char.characterName}</h3>
+                <span class="badge" style="background:#1e293b; color:#94a3b8;">${char.archetype}</span>
+              </div>
+              <p style="color: var(--text-muted); font-size: 0.85rem; min-height: 42px; margin-bottom: 14px;">${char.characterDescription}</p>
+              <div style="margin-bottom: 16px;">
+                <div class="stat-row">
+                  <span class="stat-name">HP</span>
+                  <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${(char.baseHp/150)*100}%; background: #00ff88;"></div></div>
+                  <span class="stat-val">${char.baseHp}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-name">ATK</span>
+                  <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${(char.baseAttack/30)*100}%; background: #ff2a6d;"></div></div>
+                  <span class="stat-val">${char.baseAttack}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-name">DEF</span>
+                  <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${(char.baseDefense/15)*100}%; background: #ffcc00;"></div></div>
+                  <span class="stat-val">${char.baseDefense}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-name">SPD</span>
+                  <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${(char.speed/12)*100}%; background: #00e5ff;"></div></div>
+                  <span class="stat-val">${char.speed}</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm ${isP1 ? 'btn-primary' : 'btn-secondary'}" style="flex: 1;" onclick="pickFighter(1, ${char.characterId})">
+                  ${isP1 ? 'P1 PICKED' : 'PICK P1'}
+                </button>
+                <button class="btn btn-sm ${isP2 ? 'btn-danger' : 'btn-secondary'}" style="flex: 1;" onclick="pickFighter(2, ${char.characterId})">
+                  ${isP2 ? 'P2 PICKED' : 'PICK P2'}
+                </button>
+              </div>
+            </div>`;
+        }
+      });
+    }
+
+    window.pickFighter = function(playerNum, charId) {
+      const selected = characters.find(c => c.characterId === charId);
+      if (!selected) return;
+      if (playerNum === 1) {
+        p1Char = selected;
+        document.getElementById('matchupP1Name').innerText = selected.characterName;
+        document.getElementById('matchupP1Arch').innerText = selected.archetype;
+      } else {
+        p2Char = selected;
+        document.getElementById('matchupP2Name').innerText = selected.characterName;
+        document.getElementById('matchupP2Arch').innerText = selected.archetype;
+      }
+      renderFighterCards();
+    };
+
+    window.startBattleWithSelections = function() {
+      switchView('play');
+    };
+
+    // GAME ENGINE INTEGRATION
+    function initGameEngine() {
+      const canvas = document.getElementById('gameCanvas');
+      document.getElementById('battleResultModal').style.display = 'none';
+
+      if (gameEngine) gameEngine.stop();
+
+      gameEngine = new ClashGameEngine(
+        canvas,
+        { id: p1Char.characterId, name: p1Char.characterName },
+        { id: p2Char.characterId, name: p2Char.characterName },
+        async (result) => {
+          // On Match Finish
+          const modal = document.getElementById('battleResultModal');
+          modal.style.display = 'flex';
+          const winnerUname = result.winnerPlayerIndex === 1 ? (p1User?.username || 'Player 1') : (p2User?.username || 'Player 2');
+          document.getElementById('modalWinnerName').innerText = `${winnerUname} Wins the Clash!`;
+          document.getElementById('modalScoreLine').innerText = `Final Score: ${result.p1Score} - ${result.p2Score}`;
+          document.getElementById('modalDbStatus').innerText = 'Saving match telemetry to database...';
+
+          // Post complete match telemetry to /api/matches
+          try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (p1Token) headers['Authorization'] = 'Bearer ' + p1Token;
+            if (p2Token) headers['X-Player2-Authorization'] = 'Bearer ' + p2Token;
+
+            const payload = {
+              player1UserId: p1User?.id || p1User?.userId || 1,
+              player2UserId: p2User?.id || p2User?.userId || 2,
+              player1Token: p1Token,
+              player2Token: p2Token,
+              player1CharacterId: p1Char.characterId,
+              player2CharacterId: p2Char.characterId,
+              player1FinalScore: result.p1Score,
+              player2FinalScore: result.p2Score,
+              winnerPlayerIndex: result.winnerPlayerIndex,
+              player1RoundsWon: (result.winnerPlayerIndex === 1 ? 2 : 1),
+              player2RoundsWon: (result.winnerPlayerIndex === 2 ? 2 : 1),
+              matchDurationSeconds: 75,
+              totalRounds: 3
+            };
+            const r = await fetch('/api/matches', {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify(payload)
+            });
+            const resData = await r.json();
+            if (resData.success) {
+              document.getElementById('modalDbStatus').innerText = `Match #${resData.matchId} committed to database!`;
+            } else {
+              document.getElementById('modalDbStatus').innerText = 'Match status: ' + (resData.message || 'Validation failed');
+            }
+          } catch (e) {
+            document.getElementById('modalDbStatus').innerText = 'Match completed (offline fallback).';
+          }
+        }
+      );
+      gameEngine.start();
+    }
+
+    window.restartMatch = function() {
+      initGameEngine();
+    };
+
+    window.toggleAudioMute = function() {
+      const isMuted = sounds.toggleMute();
+      document.getElementById('btnToggleMute').innerText = isMuted ? 'Unmute Audio' : 'Mute Audio';
+    };
+
+    // AUTHENTICATION INITIALIZATION & RUNTIME CONFIGURATION
+    async function initSupabaseAuth() {
+      let url = SUPABASE_CONFIG.url;
+      let key = SUPABASE_CONFIG.publishableKey;
+
+      try {
+        const resp = await fetch('/api/config?t=' + Date.now());
+        if (resp.ok) {
+          const cfg = await resp.json();
+          if (cfg.supabaseUrl && !cfg.supabaseUrl.includes('your-project-ref')) {
+            url = cfg.supabaseUrl;
+          }
+          if (cfg.supabasePublishableKey && !cfg.supabasePublishableKey.includes('your_public_publishable')) {
+            key = cfg.supabasePublishableKey;
+          }
+        }
+      } catch (e) {
+        // Backend offline or static delivery
+      }
+
+      const badge = document.getElementById('authModeBadge');
+      const detailsBox = document.getElementById('authDetailsBox');
+      if (window.supabase && url && key && !url.includes('your-project-ref') && !key.includes('your_public_publishable')) {
+        try {
+          // Initialize TWO independent clients with persistSession: false
+          // This guarantees Player 2 login cannot overwrite or pollute Player 1 session in localStorage
+          supabaseP1 = window.supabase.createClient(url, key, {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false,
+              storageKey: 'cob_p1_auth'
+            }
+          });
+
+          supabaseP2 = window.supabase.createClient(url, key, {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false,
+              storageKey: 'cob_p2_auth'
+            }
+          });
+
+          isSupabaseActive = true;
+          if (badge) {
+            badge.style.background = 'rgba(0, 255, 136, 0.15)';
+            badge.style.color = 'var(--neon-green)';
+            badge.style.borderColor = 'var(--neon-green)';
+            badge.innerText = '● SUPABASE AUTH ACTIVE (CLOUD POSTGRESQL)';
+          }
+          if (detailsBox) {
+            const maskedKey = key.length > 16 ? (key.substring(0, 12) + '...' + key.substring(key.length - 4)) : '***';
+            detailsBox.innerHTML = `<span style="color:#94a3b8;">Cloud Endpoint:</span> <strong>${url}</strong> &bull; <span style="color:#94a3b8;">Key:</span> <code>${maskedKey}</code>`;
+          }
+          console.log('[Supabase Auth] Successfully initialized two isolated in-memory clients for Player 1 and Player 2.');
+        } catch (err) {
+          console.warn('[Supabase Auth] Init failed:', err);
+          fallbackToLocalAuth(badge);
+        }
+      } else {
+        fallbackToLocalAuth(badge);
+      }
+    }
+
+    function fallbackToLocalAuth(badge) {
+      isSupabaseActive = false;
+      const detailsBox = document.getElementById('authDetailsBox');
+      if (badge) {
+        badge.style.background = 'rgba(255, 204, 0, 0.15)';
+        badge.style.color = 'var(--neon-gold)';
+        badge.style.borderColor = 'var(--neon-gold)';
+        badge.innerText = '○ LOCAL / OFFLINE FALLBACK MODE (clash_of_bytes.db)';
+      }
+      if (detailsBox) {
+        detailsBox.innerHTML = '<span style="color:#94a3b8;">Local SQLite Database Active (clash_of_bytes.db)</span>';
+      }
+      console.log('[Auth] Supabase unconfigured. Local development / SQLite fallback active.');
+    }
+
+    // GUEST / OFFLINE MODE (Instant play on 1 PC without waiting for email verification)
+    window.playAsGuest = function(playerNum) {
+      if (playerNum === 1) {
+        if (p2User && (p2User.username === 'Guest P1' || p2User.id === 'guest-p1')) {
+          alert('Player 2 is already using Guest P1! Please sign in or use Guest P2.');
+          return;
+        }
+        p1User = { id: 'guest-p1', userId: 1, username: 'Guest P1', email: 'guest1@local' };
+        p1Token = 'guest_p1_token';
+        document.getElementById('p1LoginForm').style.display = 'none';
+        document.getElementById('p1LoggedBox').style.display = 'block';
+        document.getElementById('p1LoggedName').innerText = 'Guest P1';
+        document.getElementById('p1LoggedEmail').innerText = 'Offline Guest Mode';
+        document.getElementById('p1AuthBadge').className = 'badge badge-win';
+        document.getElementById('p1AuthBadge').innerText = 'GUEST (OFFLINE)';
+        document.getElementById('matchupP1Badge').innerText = 'P1: Guest P1';
+      } else {
+        if (p1User && (p1User.username === 'Guest P2' || p1User.id === 'guest-p2')) {
+          alert('Player 1 is already using Guest P2! Please sign in or use Guest P1.');
+          return;
+        }
+        p2User = { id: 'guest-p2', userId: 2, username: 'Guest P2', email: 'guest2@local' };
+        p2Token = 'guest_p2_token';
+        document.getElementById('p2LoginForm').style.display = 'none';
+        document.getElementById('p2LoggedBox').style.display = 'block';
+        document.getElementById('p2LoggedName').innerText = 'Guest P2';
+        document.getElementById('p2LoggedEmail').innerText = 'Offline Guest Mode';
+        document.getElementById('p2AuthBadge').className = 'badge badge-win';
+        document.getElementById('p2AuthBadge').innerText = 'GUEST (OFFLINE)';
+        document.getElementById('matchupP2Badge').innerText = 'P2: Guest P2';
+      }
+    };
+
+    // AUTHENTICATION LOGIC (P1 & P2 INDEPENDENT SIMULTANEOUS LOGIN)
+    window.handleP1Login = async function(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('p1ErrorBox');
+      errBox.style.display = 'none';
+      const u = document.getElementById('p1Username').value.trim();
+      const p = document.getElementById('p1Password').value;
+
+      if (isSupabaseActive && supabaseP1) {
+        if (!u.includes('@') || !u.includes('.')) {
+          errBox.style.display = 'block';
+          errBox.innerHTML = '<strong>Email Address Required:</strong><br>' +
+            'Supabase Auth requires your registered email address (e.g. <code>player@example.com</code>), not a username.<br>' +
+            'Please enter the full email address you used when registering.';
+          return;
+        }
+
+        try {
+          const { data, error } = await supabaseP1.auth.signInWithPassword({
+            email: u,
+            password: p
+          });
+          if (error) {
+            errBox.style.display = 'block';
+            const msg = error.message || '';
+            if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid grant')) {
+              errBox.innerHTML = '<strong>Invalid Login Credentials:</strong><br>' +
+                '&bull; Check that your email and password are typed correctly.<br>' +
+                '&bull; <strong>Email Confirmation Required:</strong> Supabase has email confirmation enabled. If you recently registered, check your email inbox and click the <strong>Supabase verification link</strong> before signing in.<br>' +
+                '&bull; Need to test immediately? Click <em>"Play P1 as Guest (Offline Mode)"</em> above.';
+            } else if (msg.toLowerCase().includes('email not confirmed')) {
+              errBox.innerHTML = '<strong>Email Not Confirmed:</strong><br>' +
+                'Please open your email inbox and click the Supabase verification link before signing in.';
+            } else {
+              errBox.innerText = 'Player 1 Login Error: ' + msg;
+            }
+            return;
+          }
+
+          // Anti-Self-Match: Validate Player 1 is not using same Supabase account as Player 2
+          if (p2User && (data.user.id === p2User.id || data.user.id === p2User.userId)) {
+            await supabaseP1.auth.signOut();
+            errBox.style.display = 'block';
+            errBox.innerText = 'Security Rejection: Player 1 and Player 2 cannot select the same user account!';
+            return;
+          }
+
+          p1Token = data.session.access_token;
+          p1User = {
+            id: data.user.id,
+            userId: data.user.id,
+            username: data.user.user_metadata?.username || data.user.email.split('@')[0],
+            email: data.user.email
+          };
+
+          document.getElementById('p1LoginForm').style.display = 'none';
+          document.getElementById('p1LoggedBox').style.display = 'block';
+          document.getElementById('p1LoggedName').innerText = p1User.username;
+          document.getElementById('p1LoggedEmail').innerText = p1User.email;
+          document.getElementById('p1AuthBadge').className = 'badge badge-win';
+          document.getElementById('p1AuthBadge').innerText = 'AUTHENTICATED (SUPABASE)';
+          document.getElementById('matchupP1Badge').innerText = 'P1: ' + p1User.username;
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Supabase connection error: ' + err.message;
+        }
+      } else {
+        // Local SQLite Auth Fallback
+        if (p2User && (p2User.username.toLowerCase() === u.toLowerCase())) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Error: Player 1 and Player 2 cannot select the same user account!';
+          return;
+        }
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+          });
+          const data = await res.json();
+          if (data.success && data.user) {
+            if (p2User && data.user.userId === p2User.userId) {
+              errBox.style.display = 'block';
+              errBox.innerText = 'Error: Player 1 and Player 2 cannot select the same user account!';
+              return;
+            }
+            p1User = data.user;
+            p1Token = data.token || 'local_p1_token';
+            document.getElementById('p1LoginForm').style.display = 'none';
+            document.getElementById('p1LoggedBox').style.display = 'block';
+            document.getElementById('p1LoggedName').innerText = data.user.username;
+            document.getElementById('p1LoggedEmail').innerText = data.user.email;
+            document.getElementById('p1AuthBadge').className = 'badge badge-win';
+            document.getElementById('p1AuthBadge').innerText = 'AUTHENTICATED (LOCAL)';
+            document.getElementById('matchupP1Badge').innerText = 'P1: ' + data.user.username;
+          } else {
+            errBox.style.display = 'block';
+            errBox.innerText = data.message || 'Login failed';
+          }
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Server connection error: ' + err.message;
+        }
+      }
+    };
+
+    window.handleP2Login = async function(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('p2ErrorBox');
+      errBox.style.display = 'none';
+      const u = document.getElementById('p2Username').value.trim();
+      const p = document.getElementById('p2Password').value;
+
+      if (isSupabaseActive && supabaseP2) {
+        if (!u.includes('@') || !u.includes('.')) {
+          errBox.style.display = 'block';
+          errBox.innerHTML = '<strong>Email Address Required:</strong><br>' +
+            'Supabase Auth requires your registered email address (e.g. <code>player@example.com</code>), not a username.<br>' +
+            'Please enter the full email address you used when registering.';
+          return;
+        }
+
+        try {
+          const { data, error } = await supabaseP2.auth.signInWithPassword({
+            email: u,
+            password: p
+          });
+          if (error) {
+            errBox.style.display = 'block';
+            const msg = error.message || '';
+            if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid grant')) {
+              errBox.innerHTML = '<strong>Invalid Login Credentials:</strong><br>' +
+                '&bull; Check that your email and password are typed correctly.<br>' +
+                '&bull; <strong>Email Confirmation Required:</strong> Supabase has email confirmation enabled. If you recently registered, check your email inbox and click the <strong>Supabase verification link</strong> before signing in.<br>' +
+                '&bull; Need to test immediately? Click <em>"Play P2 as Guest (Offline Mode)"</em> above.';
+            } else if (msg.toLowerCase().includes('email not confirmed')) {
+              errBox.innerHTML = '<strong>Email Not Confirmed:</strong><br>' +
+                'Please open your email inbox and click the Supabase verification link before signing in.';
+            } else {
+              errBox.innerText = 'Player 2 Login Error: ' + msg;
+            }
+            return;
+          }
+
+          // Anti-Self-Match: Validate Player 2 is not using same Supabase account as Player 1
+          if (p1User && (data.user.id === p1User.id || data.user.id === p1User.userId)) {
+            await supabaseP2.auth.signOut();
+            errBox.style.display = 'block';
+            errBox.innerText = 'Security Rejection: Player 1 and Player 2 cannot select the same user account!';
+            return;
+          }
+
+          p2Token = data.session.access_token;
+          p2User = {
+            id: data.user.id,
+            userId: data.user.id,
+            username: data.user.user_metadata?.username || data.user.email.split('@')[0],
+            email: data.user.email
+          };
+
+          document.getElementById('p2LoginForm').style.display = 'none';
+          document.getElementById('p2LoggedBox').style.display = 'block';
+          document.getElementById('p2LoggedName').innerText = p2User.username;
+          document.getElementById('p2LoggedEmail').innerText = p2User.email;
+          document.getElementById('p2AuthBadge').className = 'badge badge-win';
+          document.getElementById('p2AuthBadge').innerText = 'AUTHENTICATED (SUPABASE)';
+          document.getElementById('matchupP2Badge').innerText = 'P2: ' + p2User.username;
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Supabase connection error: ' + err.message;
+        }
+      } else {
+        // Local SQLite Auth Fallback
+        if (p1User && p1User.username.toLowerCase() === u.toLowerCase()) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Error: Player 1 and Player 2 cannot select the same user account!';
+          return;
+        }
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+          });
+          const data = await res.json();
+          if (data.success && data.user) {
+            if (p1User && data.user.userId === p1User.userId) {
+              errBox.style.display = 'block';
+              errBox.innerText = 'Error: Player 1 and Player 2 cannot select the same user account!';
+              return;
+            }
+            p2User = data.user;
+            p2Token = data.token || 'local_p2_token';
+            document.getElementById('p2LoginForm').style.display = 'none';
+            document.getElementById('p2LoggedBox').style.display = 'block';
+            document.getElementById('p2LoggedName').innerText = data.user.username;
+            document.getElementById('p2LoggedEmail').innerText = data.user.email;
+            document.getElementById('p2AuthBadge').className = 'badge badge-win';
+            document.getElementById('p2AuthBadge').innerText = 'AUTHENTICATED (LOCAL)';
+            document.getElementById('matchupP2Badge').innerText = 'P2: ' + data.user.username;
+          } else {
+            errBox.style.display = 'block';
+            errBox.innerText = data.message || 'Login failed';
+          }
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Server connection error: ' + err.message;
+        }
+      }
+    };
+
+    window.logoutP1 = function() {
+      if (isSupabaseActive && supabaseP1) {
+        try { supabaseP1.auth.signOut(); } catch (ignored) {}
+      }
+      p1User = null;
+      p1Token = null;
+      document.getElementById('p1LoginForm').style.display = 'block';
+      document.getElementById('p1LoggedBox').style.display = 'none';
+      document.getElementById('p1AuthBadge').className = 'badge badge-loss';
+      document.getElementById('p1AuthBadge').innerText = 'NOT SIGNED IN';
+      document.getElementById('matchupP1Badge').innerText = 'P1: Guest (Unauthenticated)';
+    };
+
+    window.logoutP2 = function() {
+      if (isSupabaseActive && supabaseP2) {
+        try { supabaseP2.auth.signOut(); } catch (ignored) {}
+      }
+      p2User = null;
+      p2Token = null;
+      document.getElementById('p2LoginForm').style.display = 'block';
+      document.getElementById('p2LoggedBox').style.display = 'none';
+      document.getElementById('p2AuthBadge').className = 'badge badge-loss';
+      document.getElementById('p2AuthBadge').innerText = 'NOT SIGNED IN';
+      document.getElementById('matchupP2Badge').innerText = 'P2: Guest (Unauthenticated)';
+    };
+
+    window.handleRegister = async function(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('regErrorBox');
+      const succBox = document.getElementById('regSuccessBox');
+      errBox.style.display = 'none';
+      succBox.style.display = 'none';
+
+      const u = document.getElementById('regUsername').value.trim();
+      const em = document.getElementById('regEmail').value.trim();
+      const p = document.getElementById('regPassword').value;
+
+      if (isSupabaseActive && supabaseP1) {
+        try {
+          const { data, error } = await supabaseP1.auth.signUp({
+            email: em,
+            password: p,
+            options: {
+              data: {
+                username: u
+              }
+            }
+          });
+          if (error) {
+            errBox.style.display = 'block';
+            const msg = error.message || '';
+            if (msg.toLowerCase().includes('rate limit')) {
+              errBox.innerHTML = '<strong>Supabase Email Rate Limit Reached:</strong><br>' +
+                'The built-in Supabase mailer allows limited confirmation emails per hour.<br>' +
+                'If you previously registered this address, check your email inbox for the existing verification link.<br>' +
+                'You can also click <em>"Play as Guest"</em> above to play offline matches right now.';
+            } else if (msg.toLowerCase().includes('email address') && msg.toLowerCase().includes('invalid')) {
+              errBox.innerHTML = '<strong>Email Provider Domain Required:</strong><br>' +
+                'Supabase checks domain MX records and requires a real email domain (e.g. <code>@gmail.com</code>, <code>@yahoo.com</code>, <code>@outlook.com</code>). Placeholder domains like <code>@clashofbytes.io</code> are rejected.';
+            } else {
+              errBox.innerText = 'Supabase Registration Error: ' + msg;
+            }
+          } else {
+            succBox.style.display = 'block';
+            if (data.session) {
+              succBox.innerHTML = `<strong>Account Created!</strong> Welcome, <strong>${u}</strong>. Your account is active and you can now sign in above as Player 1 or Player 2.`;
+            } else {
+              succBox.innerHTML = `<strong>Registration Submitted for "${u}"!</strong><br>` +
+                `A verification email has been sent to <strong>${em}</strong>.<br>` +
+                `<span style="color: var(--neon-gold); font-weight: bold;">&bull; Action Required:</span> Open your inbox and click the <strong>Supabase confirmation link</strong> before signing in above!`;
+            }
+          }
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Registration connection error: ' + err.message;
+        }
+      } else {
+        // Local SQLite Fallback Registration
+        try {
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, email: em, password: p })
+          });
+          const data = await res.json();
+          if (data.success) {
+            succBox.style.display = 'block';
+            succBox.innerText = 'Profile created successfully in local database! You can now log in above.';
+          } else {
+            errBox.style.display = 'block';
+            errBox.innerText = data.message || 'Registration failed';
+          }
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Connection error: ' + err.message;
+        }
+      }
+    };
+
+    window.checkPassStrength = function(pass) {
+      let score = 0;
+      if (pass.length >= 6) score++;
+      if (/[A-Z]/.test(pass)) score++;
+      if (/[0-9]/.test(pass)) score++;
+      if (/[^A-Za-z0-9]/.test(pass)) score++;
+      const colors = ['#ff2a6d', '#ff7700', '#ffcc00', '#00ff88'];
+      const fill = document.getElementById('passStrengthFill');
+      fill.style.width = (score * 25) + '%';
+      fill.style.background = colors[score - 1] || '#ff2a6d';
+    };
+
+    // DASHBOARD & LEADERBOARD
+    let currentDashboardPlayer = 1;
+    window.switchDashboardPlayer = function(pNum) {
+      currentDashboardPlayer = pNum;
+      loadDashboard();
+    };
+
+    window.loadDashboard = async function() {
+      const u = (currentDashboardPlayer === 1 ? p1User : p2User) || 
+                (currentDashboardPlayer === 1 ? { userId: 1, id: 1, username: 'Player 1' } : { userId: 2, id: 2, username: 'Player 2' });
+      const uid = u.id || u.userId || (currentDashboardPlayer === 1 ? 1 : 2);
+      document.getElementById('dashSubtitle').innerText = `Career statistics for ${u.username} (Player ${currentDashboardPlayer})`;
+      const btn1 = document.getElementById('btnDashP1');
+      const btn2 = document.getElementById('btnDashP2');
+      if (btn1) btn1.className = (currentDashboardPlayer === 1) ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+      if (btn2) btn2.className = (currentDashboardPlayer === 2) ? 'btn btn-danger btn-sm' : 'btn btn-secondary btn-sm';
+
+      try {
+        const res = await fetch(`/api/players/${uid}/stats`);
+        const data = await res.json();
+        document.getElementById('dashMatches').innerText = data.totalMatches || 0;
+        document.getElementById('dashWins').innerText = data.wins || 0;
+        document.getElementById('dashLosses').innerText = data.losses || 0;
+        document.getElementById('dashDraws').innerText = data.draws || 0;
+        document.getElementById('dashWinRate').innerText = (data.winRate || 0) + '%';
+        document.getElementById('dashTotalScore').innerText = data.totalScore || 0;
+        document.getElementById('dashRounds').innerText = `${data.totalRoundsWon || 0} / ${data.totalRoundsPlayed || 0} (${data.roundWinRate || 0}%)`;
+        document.getElementById('dashFavChar').innerText = data.favoriteCharacter || 'Cyber Brawler';
+
+        const listDiv = document.getElementById('dashCharUsageList');
+        if (listDiv) {
+          listDiv.innerHTML = '';
+          if (data.characterUsage && data.characterUsage.length > 0) {
+            data.characterUsage.forEach(cu => {
+              listDiv.innerHTML += `
+                <div style="background: rgba(15,23,42,0.7); border: 1px solid #334155; padding: 10px 14px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 600; color: #fff;">${cu.characterName}</span>
+                  <span class="badge" style="background:#1e293b; color:var(--neon-cyan);">${cu.matchesPlayed} matches</span>
+                </div>`;
+            });
+          } else {
+            listDiv.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">No character usage records found yet.</div>';
+          }
+        }
+      } catch (e) {
+        console.warn('Dashboard fetch error:', e);
+      }
+    };
+
+    window.loadMatchHistory = async function() {
+      try {
+        const res = await fetch('/api/matches');
+        const matches = await res.json();
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = '';
+        if (matches.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No match records found.</td></tr>';
+          return;
+        }
+        matches.forEach(m => {
+          tbody.innerHTML += `
+            <tr>
+              <td style="color:var(--neon-cyan); font-weight:bold;">#${m.matchId}</td>
+              <td style="font-size:0.8rem;">${m.matchDate}</td>
+              <td><strong>${m.player1Username}</strong> <span style="color:#64748b;">(${m.player1Character})</span></td>
+              <td><strong>${m.player2Username}</strong> <span style="color:#64748b;">(${m.player2Character})</span></td>
+              <td style="font-weight:bold; color:var(--neon-gold);">${m.player1Score} - ${m.player2Score}</td>
+              <td><span class="badge" style="background:#1e293b; color:#38bdf8;">${m.player1RoundsWon || 2} - ${m.player2RoundsWon || 1}</span></td>
+              <td style="color:var(--neon-green); font-weight:bold;">${m.winnerUsername}</td>
+              <td style="color:#94a3b8; font-size:0.85rem;">${m.matchDurationSeconds || 75}s</td>
+              <td><button class="btn btn-secondary btn-sm" onclick="alert('Match #${m.matchId} Telemetry:\\nWinner: ${m.winnerUsername} | Loser: ${m.loserUsername || 'N/A'}\\nP1: ${m.player1Username} (${m.player1Character}) - Score: ${m.player1Score}\\nP2: ${m.player2Username} (${m.player2Character}) - Score: ${m.player2Score}\\nRounds: ${m.player1RoundsWon || 2} to ${m.player2RoundsWon || 1}\\nDuration: ${m.matchDurationSeconds || 75}s')">Details</button></td>
+            </tr>`;
+        });
+      } catch (e) {
+        console.warn('Match history fetch error:', e);
+      }
+    };
+
+    window.loadLeaderboard = async function() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        const list = await res.json();
+        const tbody = document.getElementById('leaderboardTableBody');
+        tbody.innerHTML = '';
+        list.forEach((item, idx) => {
+          let rankMedal = `#${idx + 1}`;
+          if (idx === 0) rankMedal = '🥇 1ST';
+          if (idx === 1) rankMedal = '🥈 2ND';
+          if (idx === 2) rankMedal = '🥉 3RD';
+
+          tbody.innerHTML += `
+            <tr>
+              <td style="font-weight:bold; color:var(--neon-gold);">${rankMedal}</td>
+              <td><strong>${item.username}</strong></td>
+              <td>${item.matches}</td>
+              <td style="color:var(--neon-green); font-weight:bold;">${item.wins}</td>
+              <td style="color:var(--neon-pink);">${item.losses}</td>
+              <td style="font-weight:bold;">${item.winRate}%</td>
+              <td style="color:#fff; font-weight:bold;">${item.totalScore}</td>
+            </tr>`;
+        });
+      } catch (e) {
+        console.warn('Leaderboard fetch error:', e);
+      }
+    };
+
+    // Initialize
+    loadCharacters();
+    initSupabaseAuth();
+
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['home', 'cg', 'select', 'play', 'auth', 'dashboard', 'history', 'leaderboard'].includes(hash)) {
+        window.switchView(hash);
+      }
+    });
+    if (window.location.hash) {
+      const initHash = window.location.hash.replace('#', '');
+      if (['home', 'cg', 'select', 'play', 'auth', 'dashboard', 'history', 'leaderboard'].includes(initHash)) {
+        window.switchView(initHash);
+      }
+    }
+  </script>
+</body>
+</html>

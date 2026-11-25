@@ -1,0 +1,12 @@
+{
+  "name": "clash-of-bytes",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Clash of Bytes - 2D Cyber Multiplayer Fighting Game",
+  "scripts": {
+    "install": "cd Clash_Of_Bytes/website/frontend && npm install",
+    "build": "cd Clash_Of_Bytes/website/frontend && npm install && npm run build",
+    "dev": "cd Clash_Of_Bytes/website/frontend && npm run dev",
+    "preview": "cd Clash_Of_Bytes/website/frontend && npm run preview"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "clash-of-bytes-inner",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "install": "cd website/frontend && npm install",
+    "build": "cd website/frontend && npm install && npm run build",
+    "dev": "cd website/frontend && npm run dev",
+    "preview": "cd website/frontend && npm run preview"
+  }
+}

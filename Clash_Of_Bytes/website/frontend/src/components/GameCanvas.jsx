@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ClashGameEngine } from '../../../game-client/engine.js';
-import { sounds } from '../../../game-client/audio.js';
+import { ClashGameEngine } from '../game-client/engine.js';
+import { sounds } from '../game-client/audio.js';
 import { api } from '../services/api.js';
 
 export default function GameCanvas({ p1Char, p2Char, p1User, p2User, onMatchFinish }) {
