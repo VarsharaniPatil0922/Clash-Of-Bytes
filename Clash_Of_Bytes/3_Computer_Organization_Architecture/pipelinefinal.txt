@@ -1,0 +1,19 @@
+
+program ClashOfBytesPipeline
+
+    ATK = 54
+    DEF = 14
+    COMBO = 3
+    ENEMY_HP = 150
+    PLAYER_SCORE = 0
+
+    RAW = ATK - DEF
+    DMG = RAW * COMBO
+
+    ENEMY_HP = ENEMY_HP - DMG
+    PLAYER_SCORE = PLAYER_SCORE + DMG
+
+    BONUS = ATK + COMBO
+    FINAL_SCORE = PLAYER_SCORE + BONUS
+
+end
